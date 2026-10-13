@@ -191,87 +191,115 @@
   <p>
     The manual describes the stick as a real-time signal processor: shift layers, relative axes,
     response curves, macro timing and LED priorities all run <strong>in the firmware</strong>,
-    not on the PC. The firmware takes its instructions from one table. This is that table, to
-    scale — hover a segment.
+    not on the PC. The firmware takes its instructions from one table. This is that table.
   </p>
 
-  <div class="memmap" role="img" aria-label="Map of the 4096-byte parameter block">
-    <i class="m-hdr" style="--n:10"  title="0x000 header: marker, device type, CRC-32, firmware version"></i>
-    <i class="m-glb" style="--n:50"  title="0x00A global options, mouse, POV hats"></i>
-    <i class="m-axs" style="--n:208" title="0x03C axes: 8 logical + 8 physical records, 8 response curves"></i>
-    <i class="m-btn" style="--n:512" title="0x10C button tables: 128 physical lines + 128 logical lines, 2 bytes each"></i>
-    <i class="m-axs" style="--n:16"  title="0x30C axis-to-buttons records"></i>
-    <i class="m-glb" style="--n:20"  title="0x31C virtual-button settings, system address"></i>
-    <i class="m-ext" style="--n:128" title="0x330 external devices (grips, modules): 8 records of 16 bytes"></i>
-    <i class="m-led" style="--n:320" title="0x3B0 LED channel masks and LED events (up to 52 x 6 bytes)"></i>
-    <i class="m-btn" style="--n:240" title="0x4F0 Boolean function records"></i>
-    <i class="m-glb" style="--n:58"  title="0x5E0 more global options; POV 2 and 3"></i>
-    <i class="m-axs" style="--n:160" title="0x61A axes 8-15, per-axis curve number"></i>
-    <i class="m-unk" style="--n:214" title="0x6BA referenced by button code; not decoded"></i>
-    <i class="m-axs" style="--n:64"  title="0x790 per-axis trimmer source"></i>
-    <i class="m-led" style="--n:48"  title="0x7D0 LED gauge records"></i>
-    <i class="m-btn" style="--n:768" title="0x800 button-table extension and the Advanced Mapping virtual layer"></i>
-    <i class="m-det" style="--n:690" title="0xB00 detents"></i>
-    <i class="m-zero" style="--n:590" title="0xDB2 unused: zero, no references found"></i>
+  <div class="pkt">
+  <div class="ptitle">Parameter block <em>4096 bytes · sizes in bytes · not to scale</em></div>
+  <div class="prow"><span class="off">0x000</span><div class="pc hdr" style="--w:1.3"><b>Marker · type</b><span>4</span></div><div class="pc hdr ver" style="--w:1.3"><b>CRC-32</b><span>4</span></div><div class="pc hdr ver" style="--w:1.1"><b>Firmware</b><span>2</span></div><div class="pc glb" style="--w:6"><b>Global options · mouse · POV hats</b><span>50</span></div></div>
+  <div class="prow"><span class="off">0x03C</span><div class="pc axs" style="--w:4"><b>Logical axes 0–7</b><span>8 × 8</span></div><div class="pc axs" style="--w:4"><b>Physical axes 0–7</b><span>8 × 8</span></div><div class="pc axs" style="--w:5"><b>Response curves</b><span>8 × 10</span></div></div>
+  <div class="prow"><span class="off">0x10C</span><div class="pc bt" style="--w:1"><b>Physical button table — what each wired line does</b><span>128 × 2</span></div></div>
+  <div class="prow"><span class="off">0x20C</span><div class="pc bt" style="--w:1"><b>Logical button table — what each line sends to the PC</b><span>128 × 2</span></div></div>
+  <div class="prow"><span class="off">0x30C</span><div class="pc axs" style="--w:1.6"><b>Axis → buttons</b><span>8 × 2</span></div><div class="pc glb" style="--w:1.8"><b>Virtual buttons · address</b><span>20</span></div><div class="pc ext" style="--w:6"><b>External devices — the grip and modules</b><span>8 × 16</span></div></div>
+  <div class="prow"><span class="off">0x3B0</span><div class="pc led" style="--w:1.2"><b>LED masks</b><span>8</span></div><div class="pc led" style="--w:8"><b>LED events — colour, blink, trigger</b><span>52 × 6</span></div></div>
+  <div class="prow"><span class="off">0x4F0</span><div class="pc bt" style="--w:6"><b>Boolean functions</b><span>240</span></div><div class="pc glb" style="--w:2"><b>More options · POV 2–3</b><span>58</span></div></div>
+  <div class="prow"><span class="off">0x61A</span><div class="pc axs" style="--w:2"><b>Logical axes 8–15</b><span>64</span></div><div class="pc axs" style="--w:2"><b>Physical axes 8–15</b><span>64</span></div><div class="pc axs" style="--w:1.3"><b>Curve #</b><span>32</span></div><div class="pc unk" style="--w:3"><b>Not decoded</b><span>214</span></div><div class="pc axs" style="--w:2"><b>Trimmer source</b><span>64</span></div><div class="pc led" style="--w:1.6"><b>LED gauges</b><span>48</span></div></div>
+  <div class="prow"><span class="off">0x800</span><div class="pc bt" style="--w:3"><b>Button table extension</b><span>128 × 2</span></div><div class="pc bt dim" style="--w:6"><b>“Advanced Mapping” virtual layer — format not decoded</b><span>512</span></div></div>
+  <div class="prow"><span class="off">0xB00</span><div class="pc det" style="--w:6"><b>Detents</b><span>690</span></div><div class="pc zero" style="--w:5"><b>Unused</b><span>590</span></div></div>
   </div>
   <div class="legend">
     <span style="--c:#ffd9a8">Header</span>
-    <span style="--c:#b85200">Global options</span>
+    <span style="--c:#b85200">Options</span>
     <span style="--c:#ff7100">Axes</span>
     <span style="--c:#2fb4ff">Buttons</span>
     <span style="--c:#9a6cff">External devices</span>
     <span style="--c:#5ed16a">LEDs</span>
     <span style="--c:#ffc400">Detents</span>
-    <span style="--c:#3a2408">Not decoded</span>
-    <span style="--c:#120c05">Unused</span>
+    <span class="lg-ver">Confirmed on hardware</span>
   </div>
 
-  <h3>It reads like a structure, because it is one</h3>
   <p>
-    Decrypted, a near-default block is mostly <code>00</code>, <code>FF</code> and
-    <code>80</code> — about 1.6 bits of information per byte. The patterns are visible by eye:
+    Roughly four fifths of it is accounted for, at least by purpose. Most of the block is tables
+    of small fixed-size records, and the records are where the settings live. Four of them carry
+    nearly everything a pilot touches. Bits are drawn low bit first; the number under each
+    field is its width.
   </p>
-<div class="hex"><span class="o">0000</span>  <span class="a">FF FF 11 FF</span>  <span class="g">cc cc cc cc</span>  <span class="y">0C 22</span> C4 59 FF 00 00 00   <span class="c">marker, type 0x11 · CRC-32 · firmware 2.20.C</span>
-<span class="o">003C</span>  <span class="a">B0</span> 00 0C 1E 0A 00 00 00  <span class="a">B1</span> 01 0C 1E 0A 00 00 00   <span class="c">logical axes 0, 1: enabled, X and Y, 12-bit</span>
-<span class="o">004C</span>  <span class="a">B2</span> 05 0B 64 0A 00 00 00  <span class="a">B3</span> 02 0B 00 1E 00 00 00   <span class="c">axis 2 on Rot Z (the twist), axis 3 on Z</span>
-<span class="o">00BC</span>  80 80 80 80 80 80 80 80  80 80                     <span class="c">a response curve: ten points, 0x80 = straight line</span>
-<span class="o">012C</span>  <span class="a">3A 00  38 00  3B 00  39 00</span>                         <span class="c">lines 16-19: one hat, wired down / up / left / right</span>
-<span class="o">020C</span>  FF FF FF FF FF FF FF FF  FF FF FF FF <span class="g">96 FF  97 FF</span>   <span class="c">logical table: 0x80 + (joystick button - 1)</span>
-<span class="o">03B8</span>  <span class="g">C0 06 04</span> 01 00 00                                  <span class="c">LED event: LED 0, blue, constant</span></div>
-  <p class="cap">Excerpts from a real Gladiator EVO block. The CRC is shown as <code>cc</code>; per-unit calibration values are omitted.</p>
 
-  <h3>What is where</h3>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Offset</th><th>Contents</th><th>Status</th></tr></thead>
-    <tbody>
-      <tr><td><code>0x000</code></td><td>Marker bytes, device type id, <strong>CRC-32 of everything after it</strong>, firmware version</td><td><span class="pill verified">Verified</span></td></tr>
-      <tr><td><code>0x00A</code></td><td>Global options: pulse times, button and POV counts, virtual controllers, FPS limits, port modes</td><td><span class="pill static">Static</span></td></tr>
-      <tr><td><code>0x03C</code></td><td><strong>Logical axes</strong> — 8 bytes each: bound physical axis, enable / visible / invert, HID usage, precision, deadzones, combine, relative mode</td><td><span class="pill static">Static</span></td></tr>
-      <tr><td><code>0x07C</code></td><td><strong>Physical axes</strong> — 8 bytes each: sensor type, filter grade, auto-centre, trimmer, and the per-unit calibration</td><td><span class="pill verified">One field verified</span></td></tr>
-      <tr><td><code>0x0BC</code></td><td>Response curves — ten points each</td><td><span class="pill static">Static</span></td></tr>
-      <tr><td><code>0x10C</code></td><td><strong>Physical button table</strong> — 128 lines × 2 bytes: a 5-bit function type (Button, Toggle, Tempo, SHIFT, POV, Encoder…) and its parameter</td><td><span class="pill static">Static</span></td></tr>
-      <tr><td><code>0x20C</code></td><td><strong>Logical button table</strong> — 128 lines × 2 bytes: joystick button, keystroke, hat, macro, mouse…</td><td><span class="pill static">Static</span></td></tr>
-      <tr><td><code>0x330</code></td><td>External devices — the grip and any modules: bus address, type, registers, LEDs</td><td><span class="pill static">Static</span></td></tr>
-      <tr><td><code>0x3B0</code></td><td>LED events — colour, blink mode and the condition that triggers it</td><td><span class="pill static">Static</span></td></tr>
-      <tr><td><code>0xB00</code></td><td>Detents</td><td><span class="pill static">Shallow</span></td></tr>
-    </tbody>
-  </table></div>
-
+  <h3>An axis, twice</h3>
   <p>
-    About four fifths of the block is accounted for, at least by purpose. The field-level tables —
-    with the evidence and a confidence for every row — are in the
-    <a href="#databank">data bank</a>.
+    Every axis is described two ways. The <strong>physical</strong> record is the sensor: how to
+    filter it, and the calibration that makes this particular unit read true. The
+    <strong>logical</strong> record is what the PC sees: which sensor feeds it, which HID axis it
+    appears as, its deadzones.
+  </p>
+  <div class="pkt">
+  <div class="ptitle">Physical axis record <em>8 bytes · at 0x07C + 8n</em></div>
+  <div class="prow bits"><span class="off">byte 0–1</span><div class="pc axs" style="--w:1" title="ACn (1 bit)"><b>ACn</b><span>1</span></div><div class="pc axs" style="--w:1" title="ACl (1 bit)"><b>ACl</b><span>1</span></div><div class="pc axs" style="--w:1" title="Inv (1 bit)"><b>Inv</b><span>1</span></div><div class="pc glb" style="--w:1" title="In (1 bit)"><b>In</b><span>1</span></div><div class="pc led" style="--w:3" title="H-filter (3 bits)"><b>H-filter</b><span>3</span></div><div class="pc axs" style="--w:1" title="Trm (1 bit)"><b>Trm</b><span>1</span></div><div class="pc glb" style="--w:4" title="Multiplier (4 bits)"><b>Multiplier</b><span>4</span></div><div class="pc axs" style="--w:1" title="Ext (1 bit)"><b>Ext</b><span>1</span></div><div class="pc led ver" style="--w:3" title="Filter grade (3 bits)"><b>Filter grade</b><span>3</span></div></div>
+  <div class="prow bits"><span class="off">byte 2–3</span><div class="pc led" style="--w:8" title="Dynamic filter threshold (8 bits)"><b>Dynamic filter threshold</b><span>8</span></div><div class="pc glb" style="--w:2" title="Base (2 bits)"><b>Base</b><span>2</span></div><div class="pc glb" style="--w:1" title="Dir (1 bit)"><b>Dir</b><span>1</span></div><div class="pc glb" style="--w:1" title="In (1 bit)"><b>In</b><span>1</span></div><div class="pc axs" style="--w:1" title="Eq (1 bit)"><b>Eq</b><span>1</span></div><div class="pc axs" style="--w:2" title="Trim (2 bits)"><b>Trim</b><span>2</span></div><div class="pc glb" style="--w:1" title="In (1 bit)"><b>In</b><span>1</span></div></div>
+  <div class="prow bits"><span class="off">byte 4–5</span><div class="pc det" style="--w:8" title="Kd high — calibration (8 bits)"><b>Kd high — calibration</b><span>8</span></div><div class="pc det" style="--w:8" title="Kd low — calibration (8 bits)"><b>Kd low — calibration</b><span>8</span></div></div>
+  <div class="prow bits"><span class="off">byte 6–7</span><div class="pc det" style="--w:13" title="Bias (signed) — calibration (13 bits)"><b>Bias (signed) — calibration</b><span>13</span></div><div class="pc zero" style="--w:3" title="– (3 bits)"><b>–</b><span>3</span></div></div>
+  </div>
+  <div class="pkt">
+  <div class="ptitle">Logical axis record <em>8 bytes · at 0x03C + 8n</em></div>
+  <div class="prow bits"><span class="off">byte 0–1</span><div class="pc axs" style="--w:4" title="Physical axis (4 bits)"><b>Physical axis</b><span>4</span></div><div class="pc axs" style="--w:1" title="En (1 bit)"><b>En</b><span>1</span></div><div class="pc axs" style="--w:1" title="Vis (1 bit)"><b>Vis</b><span>1</span></div><div class="pc axs" style="--w:1" title="Inv (1 bit)"><b>Inv</b><span>1</span></div><div class="pc axs" style="--w:1" title="Ctr (1 bit)"><b>Ctr</b><span>1</span></div><div class="pc glb" style="--w:4" title="HID usage (4 bits)"><b>HID usage</b><span>4</span></div><div class="pc glb" style="--w:1" title="FL (1 bit)"><b>FL</b><span>1</span></div><div class="pc zero" style="--w:1" title="– (1 bit)"><b>–</b><span>1</span></div><div class="pc glb" style="--w:1" title="2D (1 bit)"><b>2D</b><span>1</span></div><div class="pc zero" style="--w:1" title="– (1 bit)"><b>–</b><span>1</span></div></div>
+  <div class="prow bits"><span class="off">byte 2–3</span><div class="pc axs" style="--w:4" title="Precision (4 bits)"><b>Precision</b><span>4</span></div><div class="pc axs" style="--w:1" title="R (1 bit)"><b>R</b><span>1</span></div><div class="pc axs" style="--w:2" title="Rel × (2 bits)"><b>Rel ×</b><span>2</span></div><div class="pc axs" style="--w:1" title="Crv (1 bit)"><b>Crv</b><span>1</span></div><div class="pc glb" style="--w:8" title="Deadzone, low / centre (8 bits)"><b>Deadzone, low / centre</b><span>8</span></div></div>
+  <div class="prow bits"><span class="off">byte 4–5</span><div class="pc glb" style="--w:8" title="Deadzone, high (8 bits)"><b>Deadzone, high</b><span>8</span></div><div class="pc ext" style="--w:3" title="Comb. axis (3 bits)"><b>Comb. axis</b><span>3</span></div><div class="pc ext" style="--w:4" title="Combine type (4 bits)"><b>Combine type</b><span>4</span></div><div class="pc ext" style="--w:1" title="± (1 bit)"><b>±</b><span>1</span></div></div>
+  <div class="prow bits"><span class="off">byte 6–7</span><div class="pc ext" style="--w:7" title="Combine % (7 bits)"><b>Combine %</b><span>7</span></div><div class="pc axs" style="--w:1" title="Rel (1 bit)"><b>Rel</b><span>1</span></div><div class="pc glb" style="--w:8" title="FA3 fixed value (8 bits)"><b>FA3 fixed value</b><span>8</span></div></div>
+  </div>
+  <p class="cap">
+    En = enabled, Vis = visible to the PC, Inv = inverted, Ctr = has a centre, In = the three bits
+    of the sensor type, FL = forced limit, 2D = circular deadzone, Rel = relative mode,
+    Eq = response curve on. The three calibration fields differ between two units of the same
+    stick; nothing else in the record does.
+  </p>
+
+  <h3>A button, twice</h3>
+  <p>
+    The same split. Each of the 128 wired <em>lines</em> has a physical entry saying what kind of
+    thing it is — a button, a toggle, a hat direction, a shift key — and a logical entry saying
+    what it sends.
+  </p>
+  <div class="pkt">
+  <div class="ptitle">Physical button entry <em>2 bytes · at 0x10C + 2 × line</em></div>
+  <div class="prow bits"><span class="off">function</span><div class="pc bt" style="--w:3" title="Variant (3 bits)"><b>Variant</b><span>3</span></div><div class="pc bt" style="--w:5" title="Function type (5 bits)"><b>Function type</b><span>5</span></div><div class="pc glb" style="--w:8" title="Parameter (8 bits)"><b>Parameter</b><span>8</span></div></div>
+  <div class="prow bits"><span class="off">or button</span><div class="pc bt" style="--w:7" title="Line under SHIFT 1 (7 bits)"><b>Line under SHIFT 1</b><span>7</span></div><div class="pc hdr" style="--w:1" title="1 (1 bit)"><b>1</b><span>1</span></div><div class="pc bt" style="--w:7" title="Line under SHIFT 2 (7 bits)"><b>Line under SHIFT 2</b><span>7</span></div><div class="pc zero" style="--w:1" title="? (1 bit)"><b>?</b><span>1</span></div></div>
+  </div>
+  <div class="pkt">
+  <div class="ptitle">Logical button entry, joystick-button form <em>2 bytes · at 0x20C + 2 × line</em></div>
+  <div class="prow bits"><span class="off">byte 0–1</span><div class="pc bt" style="--w:7" title="Joystick button − 1 (7 bits)"><b>Joystick button − 1</b><span>7</span></div><div class="pc hdr" style="--w:1" title="1 (1 bit)"><b>1</b><span>1</span></div><div class="pc glb" style="--w:8" title="Second button, or FF (8 bits)"><b>Second button, or FF</b><span>8</span></div></div>
+  </div>
+  <p class="cap">
+    A physical entry is either a function — 5-bit type (Toggle, Tempo, SHIFT, POV, Encoder, about
+    two dozen in all) plus a variant and a parameter — or, with the top bit of its first byte
+    set, a plain button that names the lines to use while a shift is held. Logical entries with
+    the top bit clear are keystrokes, hats, macros and mouse actions instead.
+  </p>
+
+  <h3>An LED event</h3>
+  <div class="pkt">
+  <div class="ptitle">LED event <em>6 bytes · at 0x3B8 + 6n</em></div>
+  <div class="prow bits"><span class="off">byte 0–1</span><div class="pc bad" style="--w:3" title="R1 (3 bits)"><b>R1</b><span>3</span></div><div class="pc led" style="--w:3" title="G1 (3 bits)"><b>G1</b><span>3</span></div><div class="pc bt" style="--w:3" title="B1 (3 bits)"><b>B1</b><span>3</span></div><div class="pc bad" style="--w:3" title="R2 (3 bits)"><b>R2</b><span>3</span></div><div class="pc led" style="--w:3" title="G2 (3 bits)"><b>G2</b><span>3</span></div><div class="pc bt" style="--w:1" title="B2 (1 bit)"><b>B2</b><span>1</span></div></div>
+  <div class="prow bits"><span class="off">byte 2–3</span><div class="pc bt" style="--w:2" title="B2 (2 bits)"><b>B2</b><span>2</span></div><div class="pc axs" style="--w:3" title="Blink mode (3 bits)"><b>Blink mode</b><span>3</span></div><div class="pc axs" style="--w:3" title="Colour mode (3 bits)"><b>Colour mode</b><span>3</span></div><div class="pc glb" style="--w:4" title="Event type (4 bits)"><b>Event type</b><span>4</span></div><div class="pc glb" style="--w:1" title="Inv (1 bit)"><b>Inv</b><span>1</span></div><div class="pc glb" style="--w:1" title="T (1 bit)"><b>T</b><span>1</span></div><div class="pc glb" style="--w:2" title="Alt (2 bits)"><b>Alt</b><span>2</span></div></div>
+  <div class="prow bits"><span class="off">byte 4–5</span><div class="pc glb" style="--w:8" title="Event parameter (8 bits)"><b>Event parameter</b><span>8</span></div><div class="pc ext" style="--w:7" title="LED number (7 bits)"><b>LED number</b><span>7</span></div><div class="pc zero" style="--w:1" title="– (1 bit)"><b>–</b><span>1</span></div></div>
+  </div>
+  <p class="cap">
+    Two colours at three bits a channel, how to blink, and the condition that lights it — a shift
+    state, a button, calibration in progress, a bus error. The first three bytes use the same
+    packing as the LED command VKB documents publicly, which is good corroboration.
   </p>
 
   <div class="note gotcha">
-    <span class="tag">How far to trust the map</span>
+    <span class="tag">How far to trust these diagrams</span>
     <p>
-      The layout comes from reading the vendor program: it creates each settings control at run
-      time with a numeric ID, and giant <code>switch</code> functions copy between control and
-      block. Decoded with the resulting tables, real blocks read as a sensible stick — X and Y on
-      the contactless sensors, the twist on Rot Z, thirty buttons each used once, a system LED
-      that blinks on calibration. That is good evidence the map is broadly right.
-      It is not proof that any particular bit is.
+      One field here has been changed on a real stick and read back: the
+      <strong>filter grade</strong>, outlined above. The header's CRC and firmware words are
+      confirmed too. Everything else comes from reading the vendor program, which creates each
+      settings control at run time and copies it into the block in giant <code>switch</code>
+      functions. Decoded this way, real blocks read as a sensible stick — X and Y on the
+      contactless sensors, the twist on Rot Z, thirty buttons each used once — which is good
+      evidence the layout is broadly right, and not proof that any particular bit is. The
+      row-by-row tables, with evidence and a confidence for each, are in the
+      <a href="#databank">data bank</a>.
     </p>
   </div>
 </section>
