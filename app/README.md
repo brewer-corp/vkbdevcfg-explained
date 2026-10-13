@@ -27,6 +27,25 @@ report a USB serial number, and these sticks report none. So the tool waits a fe
 if the stick is not offered back it shows a **Pick the stick again** button; the write has
 already happened by then, and picking the stick lets the tool read it back and check.
 
+**Checking that a write lasted.** Every write is read back after the stick has restarted, so what
+is compared is what the stick loaded from its own storage. **Check the stick now**, on the Review
+tab, repeats that read at any time — after unplugging the stick, say, or after another program
+has been at it — and lists any bytes that differ from what the page last read or wrote. If a
+write is accepted but the read-back never happens (the tab was closed, the stick was not picked
+again), the page remembers what it wrote and says, the next time a stick is connected, whether
+that stick holds it.
+
+**A profile from another stick gets a warning.** A `.cfg` records neither a name nor a serial
+number, and sticks of one family share a type id, so the left stick's profile loads onto the
+right stick without complaint. Two things in it do belong to one stick: the calibration, and the
+grip it is set up for. When a loaded profile differs from the connected stick in either, the
+Review tab says so and will not write until that is acknowledged. File names of saved profiles
+carry the stick's name for the same reason.
+
+**A stale connection never answers.** After a stick has restarted or been replugged, Chrome
+leaves calls on the old device object pending for ever — they neither resolve nor reject. Every
+call to the stick therefore has a time limit, after which the tool looks for the stick again.
+
 ## How it is put together
 
 | Path | What |

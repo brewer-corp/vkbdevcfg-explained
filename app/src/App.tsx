@@ -8,7 +8,8 @@ import { Axes } from './ui/Axes';
 import { Buttons } from './ui/Buttons';
 import { Leds } from './ui/Leds';
 import { BlockMap } from './ui/BlockMap';
-import { Changes } from './ui/Changes';
+import { Changes, Foreign } from './ui/Changes';
+import { foreignSigns } from './core/identity';
 import { Live, useLive } from './ui/Live';
 
 const TABS = ['Overview', 'Axes', 'Buttons', 'LEDs', 'Live', 'Block', 'Review & apply'] as const;
@@ -39,6 +40,7 @@ export function App() {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [known, setKnown] = useState<HIDDevice[]>([]);
+  const [foreign, setForeign] = useState<Foreign | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => { grantedSticks().then(setKnown).catch(() => {}); }, []);
@@ -47,7 +49,7 @@ export function App() {
     setError(''); setBusy(what);
     try {
       const s = await make();
-      if (s) { setSession(s); setBlock(new Uint8Array(s.original)); setTab(initialTab()); }
+      if (s) { setSession(s); setBlock(new Uint8Array(s.original)); setForeign(null); setTab(initialTab()); }
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     setBusy('');
   }
@@ -142,9 +144,15 @@ export function App() {
         {tab === 'LEDs' && <Leds ed={editor} />}
         {tab === 'Block' && <BlockMap ed={editor} />}
         {tab === 'Review & apply' && (
-          <Changes session={session} ed={editor} runs={changes}
-            onReplace={(b) => setBlock(b)}
-            onApplied={(stored) => { session.original = stored; setSession({ ...session }); setBlock(new Uint8Array(stored)); }} />
+          <Changes session={session} ed={editor} runs={changes} foreign={foreign}
+            onDiscard={() => { setBlock(new Uint8Array(session.original)); setForeign(null); }}
+            onLoad={(name, b) => {
+              // Sticks of one family share a type id, so a profile from the other hand's stick loads without complaint.
+              const signs = session.source === 'file' ? [] : foreignSigns(session.original, b);
+              setBlock(b); setForeign(signs.length ? { name, signs } : null);
+            }}
+            onApplied={(stored) => { session.original = stored; setSession({ ...session }); setBlock(new Uint8Array(stored)); setForeign(null); }}
+            onChecked={() => setSession({ ...session })} />
         )}
       </main>
     </div>

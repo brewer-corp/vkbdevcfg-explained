@@ -159,3 +159,8 @@ table.lines { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-
 .sends { display: inline-flex; align-items: center; gap: 6px; }
 .sends select { min-width: 118px; background: #000; color: var(--fg); border: 1px solid var(--line-2); font: 12px var(--mono); padding: 3px 4px; }
 .sends input:disabled { opacity: .55; }
+.note ul { margin: 8px 0 8px 18px; padding: 0; }
+.note li { margin: 3px 0; }
+.note .row { margin-top: 10px; }
+.note label.toggle { display: flex; margin-top: 10px; color: var(--fg); }
+.note table.lines { margin: 10px 0 0; }

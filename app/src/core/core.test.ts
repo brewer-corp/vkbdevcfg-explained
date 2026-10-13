@@ -8,7 +8,8 @@ import { LOGICAL_AXIS, PHYSICAL_AXIS, extDevice, ledEvent, logicalAxisBase, logi
 import { existsSync, readFileSync } from 'node:fs';
 import { parseAfter, parseInput } from '../ui/Live';
 import { extRegisters, wiring } from './wiring';
-import { Session, applyToStick } from '../session';
+import { Session, applyToStick, backupName, checkStick, noteUnchecked, settleUnchecked } from '../session';
+import { foreignSigns } from './identity';
 
 const text = (s: string) => new TextEncoder().encode(s);
 
@@ -276,5 +277,84 @@ describe('writing when the browser forgets the stick at its restart', () => {
   it('notices when a different stick is picked', async () => {
     const { session, next } = await setup(true);
     await expect(applyToStick(session, next, () => {}, async () => new MockStick({ restartMs: 250 }))).rejects.toThrow(/picked does not hold/);
+  });
+});
+
+describe('telling one stick\'s profile from another\'s', () => {
+  const mine = demoBlock();
+  const f = (defs: typeof LOGICAL_AXIS, key: string) => defs.find((d) => d.key === key)!;
+  const samples = process.env.VKB_SAMPLES && existsSync(`${process.env.VKB_SAMPLES}/p1.cfg`) ? process.env.VKB_SAMPLES : '';
+  it('finds nothing in the stick\'s own configuration, however it was edited', () => {
+    expect(foreignSigns(mine, mine)).toEqual([]);
+    const edited = new Uint8Array(mine); setLogical(edited, 9, 'button', 40); writeField(edited, physicalAxisBase(0), f(PHYSICAL_AXIS, 'filter'), 3);
+    expect(foreignSigns(mine, edited)).toEqual([]);
+  });
+  it('notices another stick\'s calibration', () => {
+    const other = new Uint8Array(mine); other[physicalAxisBase(0) + 4] ^= 0x14; other[physicalAxisBase(1) + 6] ^= 0x40;
+    const signs = foreignSigns(mine, other);
+    expect(signs).toHaveLength(1);
+    expect(signs[0]).toMatch(/calibration differs .* on 2 axes/);
+  });
+  it('notices a different grip', () => {
+    const left = new Uint8Array(mine); left[0x332] = (left[0x332] & 0xe0) | 9;
+    expect(foreignSigns(mine, left)).toEqual(['It is set up for a different grip: SCG-L, where this stick has SCG.']);
+  });
+  it('ignores the bias bytes of a slot neither stick has calibrated', () => {
+    const a = new Uint8Array(mine), b = new Uint8Array(mine);
+    for (const x of [a, b]) x.set([0xff, 0xff], physicalAxisBase(7) + 4);
+    b[physicalAxisBase(7) + 6] = 0x55;
+    expect(foreignSigns(a, b)).toEqual([]);
+  });
+  it.skipIf(!samples)('real profiles: two saves from one stick agree, and differ from another stick', () => {
+    const load = (n: string) => cfgDecrypt(new Uint8Array(readFileSync(`${samples}/${n}.cfg`)));
+    expect(foreignSigns(load('p1'), load('p2'))).toEqual([]);
+    expect(foreignSigns(mine, load('p1')).length).toBe(2);
+  });
+});
+
+describe('checking what is on the stick', () => {
+  const connect = async () => {
+    const transport = new MockStick({ restartMs: 250 });
+    const stick = new Stick(transport);
+    const original = await stick.readBlock(await stick.readToken());
+    return { transport, session: { source: 'demo', name: 'VKBsim Gladiator EVO R  ', original, transport } as Session };
+  };
+  it('agrees when nothing changed, and records the check', async () => {
+    const { session } = await connect();
+    expect((await checkStick(session)).drift).toEqual([]);
+    expect(session.checked).toMatchObject({ how: 'check', ok: true });
+  });
+  it('reports what changed behind the page\'s back', async () => {
+    const { session, transport } = await connect();
+    const elsewhere = new Stick(transport), token = await elsewhere.readToken();
+    const theirs = new Uint8Array(await elsewhere.readBlock(token)); setLogical(theirs, 9, 'button', 77);
+    await elsewhere.writeBlock(token, withFixedCrc(theirs));
+    await new Promise((r) => setTimeout(r, 700));                                       // its restart
+    const { drift, stored } = await checkStick(session);
+    expect(drift).toEqual([{ start: logicalEntry(9), end: logicalEntry(9) }]);
+    expect(logicalFunction(stored, 9).button).toBe(77);
+    expect(session.checked).toMatchObject({ how: 'check', ok: false });
+  });
+  it('a write records its own read-back', async () => {
+    const { session } = await connect();
+    const next = new Uint8Array(session.original); setLogical(next, 9, 'button', 41);
+    await applyToStick(session, next, () => {});
+    expect(session.checked).toMatchObject({ how: 'write', ok: true });
+  });
+  it('names backups after the stick', async () => {
+    const { session } = await connect();
+    expect(backupName(session)).toMatch(/^vkb-gladiator-evo-r-backup-\d{4}-/);
+  });
+  it('remembers a write that was never read back, and settles it at the next connect', () => {
+    const kept = new Map<string, string>();
+    (globalThis as { sessionStorage?: unknown }).sessionStorage = { getItem: (k: string) => kept.get(k) ?? null, setItem: (k: string, v: string) => void kept.set(k, v), removeItem: (k: string) => void kept.delete(k) };
+    try {
+      const wanted = demoBlock(); setLogical(wanted, 9, 'button', 42);
+      expect(settleUnchecked(wanted)).toBeUndefined();                                  // nothing outstanding
+      noteUnchecked({ wanted, at: Date.now() - 5000 });
+      expect(settleUnchecked(demoBlock())).toMatchObject({ ok: false });                // another stick, or it did not last
+      expect(settleUnchecked(wanted)).toMatchObject({ ok: true });
+      expect(settleUnchecked(wanted)).toBeUndefined();                                  // settled once
+    } finally { delete (globalThis as { sessionStorage?: unknown }).sessionStorage; }
   });
 });

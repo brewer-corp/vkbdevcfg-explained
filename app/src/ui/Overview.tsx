@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import type { Editor } from '../App';
 import { blockCrcOk, firmwareText, typeId } from '../core/block';
 import { AXIS_SLOTS, HID_USAGES, LED_EVENT_MAX, LINES, LOGICAL_AXIS, extDevice, ledEvent, logicalAxisBase,
   logicalFunction, readField } from '../core/schema';
-import type { Session } from '../session';
+import { Session, forgetUnchecked } from '../session';
 import { extRegisters } from '../core/wiring';
 
 export function Overview({ session, ed, go, changed }: { session: Session; ed: Editor; go: () => void; changed: number }) {
@@ -14,8 +15,18 @@ export function Overview({ session, ed, go, changed }: { session: Session; ed: E
   const leds = [...Array(LED_EVENT_MAX).keys()].filter((i) => !ledEvent(b, i).empty).length;
   const ext = [...Array(8).keys()].map((i) => extDevice(b, i)).filter((d) => d.type !== 0);
 
+  const [late, setLate] = useState(session.late);
   return (
     <>
+      {late && (
+        <div className={`note ${late.ok ? 'ok' : 'warn'}`}>
+          {late.ok
+            ? <><b>The earlier write lasted.</b> A configuration written at {late.writtenAt.toLocaleTimeString()} was never read back at the time. This stick holds it.</>
+            : <><b>An earlier write is unaccounted for.</b> A configuration written at {late.writtenAt.toLocaleTimeString()} was never read back, and this
+                stick does not hold it. If this is a different stick, connect the one you wrote to. Otherwise the write did not last.
+                <div className="row"><button className="btn" onClick={() => { forgetUnchecked(); setLate(undefined); }}>Dismiss</button></div></>}
+        </div>
+      )}
       <div className="stats">
         <Stat k="Model type" v={`0x${typeId(b).toString(16)}`} />
         <Stat k="Firmware" v={firmwareText(b)} />
