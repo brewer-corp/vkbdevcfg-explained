@@ -347,6 +347,25 @@ kbd, kbd.key {
 .seq .rx .who { color: var(--accent-2); } .seq .rx .what b { color: var(--accent-2); font-weight: 400; }
 .seq .ev .who { color: var(--fg-faint); } .seq .ev .what { color: var(--fg-faint); font-family: var(--sans); font-size: 13px; }
 
+/* system diagram (inline SVG) */
+.diagram { border: 1px solid var(--line-2); background: #000; padding: 14px 12px 8px; margin: 18px 0 20px; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.diagram .box-out { fill: rgba(255, 113, 0, .03); stroke: var(--line-2); stroke-dasharray: 4 4; }
+.diagram .box { fill: var(--bg-2); stroke: var(--fg-faint); }
+.diagram .box-a { fill: rgba(255, 113, 0, .10); stroke: var(--accent); stroke-width: 1.5; }
+.diagram .box-b { fill: rgba(47, 180, 255, .10); stroke: var(--accent-2); stroke-width: 1.5; }
+.diagram text { font-family: var(--sans); }
+.diagram .t { fill: var(--fg); font-size: 13.5px; font-weight: 700; }
+.diagram .s { fill: var(--fg-dim); font-size: 12.5px; }
+.diagram .s-a { fill: var(--accent-hot); font-size: 12.5px; }
+.diagram .s-b { fill: var(--accent-2); font-size: 12.5px; }
+.diagram .cap-a, .diagram .cap-b, .diagram .cap-d { font-family: var(--caps); font-size: 11px; letter-spacing: .14em; }
+.diagram .cap-a { fill: var(--accent); } .diagram .cap-b { fill: var(--accent-2); } .diagram .cap-d { fill: var(--fg-faint); font-size: 9.5px; }
+.diagram .ln-a { stroke: var(--accent); stroke-width: 3; fill: none; }
+.diagram .ln-b { stroke: var(--accent-2); stroke-width: 3; fill: none; }
+.diagram .ln-d { stroke: var(--fg-faint); stroke-width: 1.5; fill: none; }
+.diagram .fa { fill: var(--accent); } .diagram .fb { fill: var(--accent-2); } .diagram .fd { fill: var(--fg-faint); }
+
 /* packet-style layout diagrams */
 .pkt { margin: 18px 0 8px; border: 1px solid var(--line-2); background: #000; padding: 0 4px 4px; overflow-x: auto; }
 .pkt .ptitle { font-family: var(--caps); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); padding: 9px 8px 8px; }

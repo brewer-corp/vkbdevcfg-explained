@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VKBDevCfg Explained — how VKB sticks are really configured</title>
 <meta name="description" content="A reverse-engineering debrief: the USB protocol, the 4096-byte configuration block and the .cfg profile format behind VKB's joystick configuration tool, verified on a Gladiator EVO.">
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 
@@ -55,6 +55,8 @@
   <div class="nav-group">
     <div class="group-title">Briefing</div>
     <a class="item" href="#summary">The short version</a>
+    <a class="item" href="#ground">Ground school</a>
+    <a class="item" href="#system">How the pieces fit</a>
     <a class="item" href="#target">The target</a>
   </div>
   <div class="nav-group">
@@ -84,10 +86,10 @@
   <h2><span class="num">01</span>The short version</h2>
 
   <p>
-    Two questions started this. <em>What does VKBDevCfg actually do?</em> And <em>could we put a
-    better interface on top of it?</em> The first is answered in the
-    <a href="guide.html">pilot's guide</a>. The second has an answer now too:
-    <strong>yes — and you do not need VKBDevCfg at all.</strong>
+    VKB sticks are configured with VKBDevCfg, a Windows program with no documentation of how it
+    talks to the hardware. Two questions: <em>what does it actually do?</em> and <em>could there
+    be a better interface?</em> The <a href="guide.html">pilot's guide</a> answers the first.
+    The answer to the second is <strong>yes — without VKBDevCfg at all.</strong>
   </p>
 
   <div class="grid two">
@@ -115,9 +117,8 @@
   </div>
 
   <p>
-    So a better configuration tool is not a wrapper around the vendor program. It is
-    <strong>an editor for 4096 bytes</strong>, plus about three hundred lines of transport that
-    already exist in this project's repository.
+    A better configuration tool is therefore <strong>an editor for 4096 bytes</strong>, plus
+    about three hundred lines of transport that already exist in this project's repository.
   </p>
 
   <div class="note info">
@@ -132,8 +133,194 @@
 </section>
 
 <!-- ==================================================================== -->
+<section id="ground">
+  <h2><span class="num">02</span>Ground school</h2>
+
+  <p>Four ideas carry the rest of the page.</p>
+
+  <h3>What a joystick is, to a computer</h3>
+  <p>
+    A joystick reports three kinds of thing, about a thousand times a second:
+  </p>
+  <div class="grid">
+    <div class="tile"><h4>Axis</h4><p>One number that varies continuously — how far the stick is pushed left or right, how far the throttle is forward. Here, 0 to 4095. Stick X, stick Y, twist and throttle are four axes.</p></div>
+    <div class="tile"><h4>Button</h4><p>One bit: pressed or not. This stick's report has room for 128.</p></div>
+    <div class="tile"><h4>Hat</h4><p>A small thumb switch that reports one of eight directions, or centred. Also called a POV.</p></div>
+  </div>
+  <p>
+    The stick hardware has none of these. It has magnetic sensors that output voltages, and
+    switches that close contacts. Turning one into the other is the job of a microcontroller
+    inside the base, and <em>how</em> it does so — which sensor is which axis, how it is filtered
+    and curved, which contact is which button — is the configuration.
+  </p>
+
+  <h3>HID: why there is no driver</h3>
+  <p>
+    <strong>HID</strong>, the Human Interface Device class, is the part of USB that keyboards, mice
+    and game controllers speak. Its trick is that the device describes itself. On connection it
+    hands the computer a <em>report descriptor</em>: a compact table saying “I send 64-byte
+    packets; bytes 1–2 are an axis called X, bytes 17–32 are 128 buttons…”. Every operating
+    system ships one generic driver that reads that table, so a HID device works everywhere with
+    no vendor software.
+  </p>
+  <p>The packets are called <strong>reports</strong>, each tagged with an ID, and come in three kinds:</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Kind</th><th>Direction</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Input</strong></td><td>device → computer, continuously</td><td>The live state: axes, buttons, hat</td></tr>
+      <tr><td><strong>Output</strong></td><td>computer → device</td><td>Things like keyboard LEDs or rumble</td></tr>
+      <tr><td><strong>Feature</strong></td><td>either way, only when asked</td><td>Settings. Not part of the live stream</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Endpoints: what “no OUT endpoint” means</h3>
+  <p>
+    A USB device talks through numbered channels called <strong>endpoints</strong>, each with a
+    fixed direction, named from the computer's point of view: <strong>IN</strong> carries data in
+    to the computer, <strong>OUT</strong> carries data out to the device.
+  </p>
+  <ul>
+    <li><strong>Endpoint 0, the control endpoint.</strong> Every USB device has one. It is
+      two-way and works by request and reply: the computer asks, the device answers. It exists for
+      housekeeping — “who are you?”, “send me your descriptor” — and is slow by design.</li>
+    <li><strong>An interrupt IN endpoint.</strong> The fast lane to the computer. The computer
+      polls it on a fixed schedule — here every millisecond — and collects an input report.</li>
+    <li><strong>An interrupt OUT endpoint.</strong> The fast lane the other way, for devices that
+      need a steady stream <em>from</em> the computer. Optional.</li>
+  </ul>
+  <p>
+    This stick has endpoint 0 and one interrupt IN endpoint, and nothing else. So there is no
+    fast lane to the stick: anything the computer wants to tell it has to go through the
+    housekeeping channel, as a <code>SET_REPORT</code> request, and anything it wants back
+    beyond the live stream has to be fetched with <code>GET_REPORT</code>. That is exactly what
+    feature reports are for, and it is why the whole configuration protocol is built on one.
+  </p>
+
+  <h3>Where the work happens</h3>
+  <p>
+    A cheap stick sends raw readings and leaves the rest to software on the PC. A VKB stick does
+    the opposite. Its firmware calibrates and filters each sensor, applies response curves,
+    resolves shift layers, times macros and drives LEDs, and only then builds the report. By the
+    time data reaches the computer it is finished. The PC-side program is not in that path at all
+    — it only edits the table the firmware works from.
+  </p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="system">
+  <h2><span class="num">03</span>How the pieces fit</h2>
+
+  <p>
+    Two separate conversations share one cable. Flying uses the first. Configuring uses the
+    second. They do not touch.
+  </p>
+
+  <div class="diagram">
+  <svg viewBox="0 0 1000 560" role="img" aria-label="System diagram: sensors and switches feed the firmware, which is configured by the parameter block; the data plane carries input reports to the operating system's generic HID driver and the game; the management plane carries feature report 0x59 between the parameter block and a configuration tool.">
+    <defs>
+      <marker id="ah-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fa"/></marker>
+      <marker id="ah-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fb"/></marker>
+      <marker id="ah-d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fd"/></marker>
+    </defs>
+
+    <!-- containers -->
+    <rect class="box-out" x="10" y="34" width="440" height="516"/>
+    <text class="cap-a" x="24" y="24">THE STICK</text>
+    <text class="cap-d" x="446" y="24" text-anchor="end">STM32 microcontroller + firmware</text>
+    <rect class="box-out" x="640" y="34" width="350" height="516"/>
+    <text class="cap-a" x="654" y="24">THE COMPUTER</text>
+
+    <!-- hardware inputs -->
+    <rect class="box" x="26" y="62" width="128" height="62"/>
+    <text class="t" x="90" y="88" text-anchor="middle">Magnetic sensors</text>
+    <text class="s" x="90" y="106" text-anchor="middle">stick, twist, throttle</text>
+    <rect class="box" x="26" y="142" width="128" height="62"/>
+    <text class="t" x="90" y="168" text-anchor="middle">Switches</text>
+    <text class="s" x="90" y="186" text-anchor="middle">up to 128 “lines”</text>
+    <rect class="box" x="26" y="222" width="128" height="62"/>
+    <text class="t" x="90" y="248" text-anchor="middle">Grip, modules</text>
+    <text class="s" x="90" y="266" text-anchor="middle">internal serial bus</text>
+
+    <!-- firmware pipeline -->
+    <rect class="box-a" x="176" y="54" width="264" height="258"/>
+    <text class="cap-a" x="190" y="76">FIRMWARE</text>
+    <text class="t" x="190" y="106">1  Calibrate and filter sensors</text>
+    <text class="t" x="190" y="134">2  Apply curves and deadzones</text>
+    <text class="t" x="190" y="162">3  Give each line a function</text>
+    <text class="s" x="208" y="180">button, toggle, hat, shift, encoder…</text>
+    <text class="t" x="190" y="208">4  Resolve shifts, run macros</text>
+    <text class="t" x="190" y="236">5  Map to axes and buttons</text>
+    <text class="t" x="190" y="264">6  Build the input report</text>
+    <text class="s" x="208" y="282">and drive the LEDs</text>
+    <path class="ln-d" marker-end="url(#ah-d)" d="M154 93H174"/>
+    <path class="ln-d" marker-end="url(#ah-d)" d="M154 173H174"/>
+    <path class="ln-d" marker-end="url(#ah-d)" d="M154 253H174"/>
+
+    <!-- parameter block -->
+    <rect class="box-b" x="176" y="402" width="264" height="118"/>
+    <text class="cap-b" x="190" y="426">PARAMETER BLOCK</text>
+    <text class="t" x="190" y="454">4096 bytes in flash memory</text>
+    <text class="s" x="190" y="474">axes · buttons · LEDs · curves</text>
+    <text class="s" x="190" y="492">calibration · everything</text>
+    <path class="ln-b" marker-end="url(#ah-b)" d="M308 402V316"/>
+    <text class="s-b" x="318" y="364">tells the firmware</text>
+    <text class="s-b" x="318" y="380">what to do</text>
+
+    <!-- data plane -->
+    <text class="cap-a" x="545" y="118" text-anchor="middle">DATA PLANE</text>
+    <path class="ln-a" marker-end="url(#ah-a)" d="M440 150H656"/>
+    <text class="s" x="545" y="172" text-anchor="middle">interrupt IN endpoint</text>
+    <text class="s" x="545" y="190" text-anchor="middle">input report 0x01</text>
+    <text class="s" x="545" y="208" text-anchor="middle">1000 times a second</text>
+    <text class="s-a" x="545" y="232" text-anchor="middle">one way only</text>
+
+    <rect class="box-a" x="658" y="62" width="314" height="84"/>
+    <text class="t" x="672" y="90">Operating system</text>
+    <text class="s" x="672" y="110">generic HID driver — Windows, Linux, macOS</text>
+    <text class="s-a" x="672" y="130">no VKB driver, no VKB software</text>
+    <rect class="box-a" x="658" y="186" width="314" height="84"/>
+    <text class="t" x="672" y="214">The game</text>
+    <text class="s" x="672" y="234">sees an ordinary joystick:</text>
+    <text class="s" x="672" y="252">axes, buttons, a hat. Nothing else.</text>
+    <path class="ln-a" marker-end="url(#ah-a)" d="M815 146V184"/>
+
+    <!-- management plane -->
+    <text class="cap-b" x="548" y="378" text-anchor="middle">MANAGEMENT</text>
+    <text class="cap-b" x="548" y="394" text-anchor="middle">PLANE</text>
+    <path class="ln-b" marker-start="url(#ah-b)" marker-end="url(#ah-b)" d="M444 420H654"/>
+    <text class="s" x="545" y="444" text-anchor="middle">control endpoint 0</text>
+    <text class="s" x="545" y="462" text-anchor="middle">feature report 0x59</text>
+    <text class="s" x="545" y="480" text-anchor="middle">only when asked</text>
+    <text class="s-b" x="545" y="504" text-anchor="middle">read and write</text>
+
+    <rect class="box-b" x="658" y="320" width="314" height="110"/>
+    <text class="t" x="672" y="348">A configuration tool</text>
+    <text class="s" x="672" y="368">VKBDevCfg — or anything else that can</text>
+    <text class="s" x="672" y="386">send a feature report</text>
+    <text class="s-b" x="672" y="410">reads the block · edits it · writes it back</text>
+    <rect class="box" x="658" y="480" width="314" height="56"/>
+    <text class="t" x="672" y="504">.cfg profile</text>
+    <text class="s" x="672" y="522">the same 4096 bytes, saved to a file</text>
+    <path class="ln-b" marker-start="url(#ah-b)" marker-end="url(#ah-b)" d="M815 434V476"/>
+  </svg>
+  </div>
+
+  <div class="grid">
+    <div class="tile"><h4>Data plane</h4><p>Sensors and switches in, finished joystick reports out, a thousand times a second. Standard HID. The game never learns there is anything more to the device.</p></div>
+    <div class="tile"><h4>Management plane</h4><p>A second, private conversation on the housekeeping channel, used only to read or replace the parameter block. This is the part VKB never documented, and the subject of this page.</p></div>
+    <div class="tile"><h4>The join</h4><p>The parameter block. The management plane writes it; the firmware reads it. Change the block and the stick behaves differently, on any computer, with nothing installed.</p></div>
+  </div>
+
+  <p>
+    This is why a configured VKB stick works on a Linux box, a friend's PC or a
+    fresh Windows install: the configuration travels in the stick. It is also why remapping in
+    software on the PC is the wrong layer — the interesting processing has already happened.
+  </p>
+</section>
+
+<!-- ==================================================================== -->
 <section id="target">
-  <h2><span class="num">02</span>The target</h2>
+  <h2><span class="num">04</span>The target</h2>
 
   <h3>The program</h3>
   <p>
@@ -163,13 +350,13 @@
       <tr><td>Device</td><td>VKBsim Gladiator EVO R — <code>231d:0200</code></td></tr>
       <tr><td>Firmware</td><td>2.20.C</td></tr>
       <tr><td>Interfaces</td><td>Exactly one, class HID</td></tr>
-      <tr><td>Endpoints</td><td>Exactly one: interrupt IN, 64 bytes, 1 ms. <strong>No OUT endpoint.</strong></td></tr>
+      <tr><td>Endpoints</td><td>Control endpoint 0, plus one interrupt IN (64 bytes, polled every 1 ms). <strong>No OUT endpoint.</strong></td></tr>
       <tr><td>Processor</td><td>STM32 — the handshake returns its 96-bit unique ID</td></tr>
     </tbody>
   </table></div>
   <p>
-    No OUT endpoint means everything the host sends has to be a HID <em>control transfer</em>.
-    That one fact shapes the whole protocol.
+    With no OUT endpoint, everything the computer sends goes through endpoint 0 as a control
+    request (<a href="#ground">ground school</a>). That one fact shapes the whole protocol.
   </p>
 
   <div class="tablewrap"><table>
@@ -186,12 +373,11 @@
 
 <!-- ==================================================================== -->
 <section id="block">
-  <h2><span class="num">03</span>The block</h2>
+  <h2><span class="num">05</span>The block</h2>
 
   <p>
-    The manual describes the stick as a real-time signal processor: shift layers, relative axes,
-    response curves, macro timing and LED priorities all run <strong>in the firmware</strong>,
-    not on the PC. The firmware takes its instructions from one table. This is that table.
+    The table the firmware works from. Everything the stick does differently from its factory
+    behaviour is somewhere in these 4096 bytes.
   </p>
 
   <div class="pkt">
@@ -306,10 +492,10 @@
 
 <!-- ==================================================================== -->
 <section id="link">
-  <h2><span class="num">04</span>The link</h2>
+  <h2><span class="num">06</span>The link</h2>
 
   <p>
-    Everything is a feature report <code>0x59</code>: one ID byte and 128 bytes of data. Sent with
+    The management plane is one feature report, ID <code>0x59</code>: one ID byte and 128 bytes of data. Sent with
     <code>SET_REPORT</code>, fetched with <code>GET_REPORT</code>. On Windows that is
     <code>HidD_SetFeature</code> / <code>HidD_GetFeature</code>; on Linux, two <code>hidraw</code>
     ioctls. <span class="pill verified">Verified</span>
@@ -395,7 +581,7 @@
 
 <!-- ==================================================================== -->
 <section id="profile">
-  <h2><span class="num">05</span>The profile file</h2>
+  <h2><span class="num">07</span>The profile file</h2>
 
   <p>
     A <code>.cfg</code> is what <kbd>Save</kbd> writes. For a long time it looked like the hard
@@ -427,7 +613,7 @@ file     = <span class="b">file CRC</span> + RC4(plain, key)</code></pre>
 
 <!-- ==================================================================== -->
 <section id="crypto">
-  <h2><span class="num">06</span>The “encryption”</h2>
+  <h2><span class="num">08</span>The “encryption”</h2>
 
   <p>Not one cipher. Three uses of the same small hand-written RC4 routine, with three keys:</p>
 
@@ -456,7 +642,7 @@ file     = <span class="b">file CRC</span> + RC4(plain, key)</code></pre>
 
 <!-- ==================================================================== -->
 <section id="flight">
-  <h2><span class="num">07</span>Writing to a real stick</h2>
+  <h2><span class="num">09</span>Writing to a real stick</h2>
 
   <p>
     Reading cannot hurt a device. Writing replaces its whole configuration, calibration included.
@@ -496,7 +682,7 @@ file     = <span class="b">file CRC</span> + RC4(plain, key)</code></pre>
 
 <!-- ==================================================================== -->
 <section id="wrong">
-  <h2><span class="num">08</span>Wrong turns</h2>
+  <h2><span class="num">10</span>Wrong turns</h2>
 
   <p>
     Five conclusions reached along the way were overturned by evidence. They are recorded rather
@@ -532,7 +718,7 @@ file     = <span class="b">file CRC</span> + RC4(plain, key)</code></pre>
 
 <!-- ==================================================================== -->
 <section id="tools">
-  <h2><span class="num">09</span>Tools</h2>
+  <h2><span class="num">11</span>Tools</h2>
 
   <p>Python 3, standard library only. Everything is in the repository's <code>tools/</code> directory.</p>
 
@@ -568,7 +754,7 @@ sudo python3 tools/vkb_hid.py write new.bin <span class="hi">--yes</span></code>
 
 <!-- ==================================================================== -->
 <section id="open">
-  <h2><span class="num">10</span>Open contracts</h2>
+  <h2><span class="num">12</span>Open contracts</h2>
 
   <div class="grid">
     <div class="tile">
@@ -601,7 +787,7 @@ sudo python3 tools/vkb_hid.py write new.bin <span class="hi">--yes</span></code>
 
 <!-- ==================================================================== -->
 <section id="databank">
-  <h2><span class="num">11</span>Data bank</h2>
+  <h2><span class="num">13</span>Data bank</h2>
 
   <p>The full technical record, with addresses, evidence and confidence levels.</p>
 
@@ -642,6 +828,6 @@ sudo python3 tools/vkb_hid.py write new.bin <span class="hi">--yes</span></code>
   </div>
 </footer>
 
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
