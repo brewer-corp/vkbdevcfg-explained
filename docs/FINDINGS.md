@@ -133,10 +133,10 @@ Observed on a **VKBsim Gladiator EVO R**.
 
 | Report ID | Type | Size | Role |
 |---|---|---|---|
-| `0x01` | Input | 63 B | live axes, hat, 128 button bits |
-| `0x08` | Input | 63 B | service packets; subtype `0x13` is encoder status ([`PRIOR-ART.md`](PRIOR-ART.md)) |
-| `0x0B` | Input | 63 B | auxiliary state |
-| `0x0C` | Input | 63 B | auxiliary state |
+| `0x01` | Input | 63 B | live axes, hats, 128 button bits — and the state of all 128 lines |
+| `0x08` | Input | 63 B | service packets, off by default: bus statistics, encoder status |
+| `0x0B` | Input | 63 B | appears with "Virtual BUS over USB"; not decoded |
+| `0x0C` | Input | 63 B | line states after the stick's own processing; sent on every change |
 | `0x58` | Output | 63 B | **not** used for configuration |
 | `0x59` | **Feature** | 128 B | **all configuration traffic, both directions** |
 
@@ -144,21 +144,26 @@ Observed on a **VKBsim Gladiator EVO R**.
 > `0x59` to **Get**. Both buttons use feature report `0x59`. With no OUT
 > endpoint, a write is a `SET_REPORT(Feature)` control transfer.
 
-Report `0x01` layout: eight 16-bit slots at bits 0–127 (X, Y, Rz, Z, Rx, Ry, two
-reserved), 128 one-bit buttons at bits 128–255, a 4-bit hat plus padding at
-256–271, three reserved 16-bit slots, then 23 bytes the descriptor declares
-constant.
+Report `0x01` layout: eight 16-bit axis slots (X, Y, Rz, Z, Rx, Ry, two
+reserved), 128 one-bit buttons, four 16-bit hat slots of which the descriptor
+declares only the enabled ones, then 23 bytes it declares constant.
 
-Those last bytes are not padding. Live reports carry `A5` at byte `0x2F`
-(counting the report ID as byte 0), and the vendor tool treats that as a
-validity marker: when it is present, it reads the two SHIFT states and the
-sub-shift mask from the two bytes before it ([`COMMANDS.md`](COMMANDS.md) §5).
-The marker was observed, and so was the rest: with two lines held down by
-axis zones, the 16 bytes after the marker showed exactly those lines set, and
-the SHIFT1 bit rose while a shift line was held. So every input report says
-which of the 128 lines are active, before any function is applied — which is
-how a tool can show "you pressed line 23" for a control that is not mapped to
-anything.
+Those last bytes are not padding. They carry a marker byte, `A5`; before it
+the SHIFT and SubSHIFT states; and after it a 128-bit map of which lines are
+active — before any function is applied. That is how a tool can show "you
+pressed line 23" for a control that is not mapped to anything.
+
+Report `0x0C` is the other half: the same 128 lines after their functions
+have run, and again after the logical layer, plus the state of the Boolean
+records. The stick sends it whenever something changes. At rest nothing does,
+so it went unseen until a line was made to pulse by itself
+([`BLOCK-BUTTONS.md`](BLOCK-BUTTONS.md) §11a).
+
+Two more reports can be switched on. A short command the vendor tool sends
+when its bus-test page opens makes the stick stream bus statistics in report
+`0x08`; the "Virtual BUS over USB" option in the block makes it stream encoder
+positions there, and something undecoded in `0x0B`. Layouts are in
+[`COMMANDS.md`](COMMANDS.md) §5.
 
 ---
 

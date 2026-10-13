@@ -25,12 +25,14 @@ string (§4) separate three generations, **V20**, **XT** and **XT2**, held in th
 > - The device recomputes the block CRC word itself.
 > - No short command is needed before a read or a write.
 >
-> - Input report `0x01` carries more than joystick state (§5): with two lines held down by
->   axis zones, `data[0x2F..0x3E]` showed exactly those lines set — a 128-bit map of active
->   lines, present even for a line whose function sends no button — and `data[0x2C]` bit 0
->   went to 1 while a SHIFT1 line was held. At rest the stick sends only report `0x01`.
-> - Short command `0x17` with argument 0 (no restart, no change, no acknowledgement) and
->   `0x14` with argument 1 (acknowledged `5A A5 FE 00`).
+> - Input report `0x01` carries more than joystick state (§5): a 128-bit map of active
+>   lines, and the SHIFT and SubSHIFT states.
+> - Input report `0x0C` is sent, unasked, whenever a line changes after its function has
+>   been applied (§5).
+> - Short command `0x17` with argument 0 (no restart, no change, no acknowledgement);
+>   `0x14` with argument 1 (acknowledged `5A A5 FE 00`); and `0x16` with argument 5
+>   (acknowledged `5A A5 16 05`), after which the stick streams report `0x08` (§5).
+> - The USB string descriptors (§4).
 >
 > Everything else in this document is *static*.
 
@@ -294,6 +296,13 @@ lie inside the first range, so the type `0x21` branch looks unreachable.
 | XT, `a4` | otherwise begins `XT` | `SIZE_OF_PAR` = `0x800` unless XT2 |
 | XT2, `a5` | begins `XT2` | `SIZE_OF_PAR` = `0x1000`; CRC-32 check on read; Default button takes the mask path |
 
+On the test stick the strings read, by index: 1 `VKB-Sim (C) Alex Oz 2023`; 2 the product
+name; 5 `PRO version`; 6 an e-mail address; 7 `T-Link`; 8 `NJoy32 platform NXT`; **12
+`XT2`**; 19 `#0101`; 20 `00000180` followed by the product name. The rest are empty,
+including the serial number (3). The tool also reads string 10 (profile state: it looks for
+`*0`, `*1`, `*2`), 13 (`Multidevice #n/m`), 20–27 (profile names) and 100–199 (button names,
+`B#nn name`). ***Verified*** by standard `GET_DESCRIPTOR` requests.
+
 With neither V20 nor XT, `SIZE_OF_PAR` is `0x400`. `GetDeviceProperty` (`0x00504B74`) sets it
 (`0x00F08DD4`) and the block-copy pointers. The test device has `a3` = 0, `a4` = 1, `a5` = 1
 (`0x1000`), consistent with an `XT2` tag. `0x00F081A2` ("PRO") is always set; `0x00F081BC` is
@@ -313,24 +322,61 @@ and the `FIND` commands; `0x00F081BF` ("device too old": no `Timer2` auto-read) 
 comparisons also occur: `0x00F081C0` = `0x00F08190 > 0x1986` (V20: `> 0x1988`), `> 0x219E` for
 the XT2 chooser, `< 0x2178` for the old external-device query.
 
-## 5. Input reports *(static)*
+## 5. Input reports
 
-`HidCtlDeviceData` (`0x0042BBEC`) handles interrupt-IN reports for the selected device only.
-Offsets are into the data after the report-ID byte. Every report is first copied to a per-ID
-snapshot area at `0x00FBA666`.
+Offsets are into the data after the report-ID byte; every report is 63 data bytes. What the
+vendor tool does with each is *static* (`HidCtlDeviceData`, `0x0042BBEC`); what the stick
+sends was observed and is marked ***verified***.
 
-| Report ID | What the tool does |
-|---|---|
-| `0x01` | Type 6 only. If `data[0x2E]` is `0xA5` the tail is valid: `data[0x2C]` bits 0 and 1 are the two SHIFT states; `data[0x2C]` bits 2 to 7 and `data[0x2D]` bit 7 form a 7-bit sub-shift mask shown on seven LED widgets; `data[0x2D]` bit 4 drives a status indicator. From `data[0x2F]`, LED bits for the "speed buttons" are shown when polling is on |
-| `0x08` | `data[0]` = `0x37`: payload copied to `0x00F0822D` for the detent and TECS tools; meaning not decoded. `data[0]` = `0x05`: periodic MaRS / external-device status: eight error levels in `data[1..8]` (shown only after error statistics were enabled by `0x0516`), 16-bit values at `data[0x19 + 2i]`, and a polling counter per external-device slot at `data[0x11 + i]` ("No polling" for 0, else "polling = v-1"), averaged over 16 reports and compared with an ini threshold |
-| `0x0C` | With polling on, type 6: LED state. `ShowSpeedButtonsLEDs(data, 3)` for the first 16 bytes, `(data + 0x10, 2)` for the next 16, and `data[0x20…]` to a boolean LED array. *Inferred*, low confidence: nibbles of a dword are kept in `0x00F081E9` to `0x00F081EC` |
-| `0x0B`, others | Not special-cased: only the snapshot copy and the optional raw-report analyser |
+**Report `0x01`: the joystick, and the stick's view of itself.** Sent about eleven times a
+second at rest, and on every change.
 
-The analyser is a developer tool (ID filter, offset, size, up to 12 user-defined fields, hex
-dump). It runs after `Poll_Start` (`0x004246FC`) with argument 1, or automatically above user
-level 4; `Poll_Start` and `Poll_Stop` (`0x00424724`) only flip host flags. Command
-acknowledgements are read with `GetFeature`, not as interrupt reports; `HidCtlDeviceData`
-never looks at them.
+| Bytes | Contents | |
+|---|---|---|
+| `0x00`–`0x0F` | eight 16-bit axes | ***verified*** |
+| `0x10`–`0x1F` | 128 button bits | ***verified*** |
+| `0x20`, `0x22`, `0x24`, `0x26` | hats 1–4: low nibble 0–7 clockwise from up, 8 = centred. Each is a 16-bit slot; the unused ones read 8 and are declared as padding | ***verified*** with two and four hats enabled |
+| `0x28`–`0x2B` | not read by the tool; `0x2A` is `01` at rest | unknown |
+| `0x2C` | bit 0 SHIFT1, bit 1 SHIFT2, bits 2–7 SubSHIFT 1–6 | ***verified*** for SHIFT1 and SubSHIFT 1 and 2 |
+| `0x2D` | bit 7 SubSHIFT 7; bit 4 drives a bus-status light in the tool | ***verified*** for bit 7 |
+| `0x2E` | `0xA5`: the tail is valid | ***verified*** |
+| `0x2F`–`0x3E` | 128-bit map of active **physical** lines, bit *i* = line *i* + 1: raw contacts, plus anything injected at that level — axis zones, replica buttons, complementary buttons, Boolean outputs to the physical layer | ***verified*** |
+
+The HID descriptor calls everything from `0x28` on constant padding. The vendor tool uses
+the line map for its "Poll" lights on the physical layer and the shift bits for nine small
+indicators; its own Test tab reads DirectInput, not these reports.
+
+**Report `0x0C`: the layers after the physical one.** ***Verified***: the stick sends it
+whenever one of these maps changes, with no request from the host. Nothing changes at rest,
+which is why it had not been seen.
+
+| Bytes | Contents | |
+|---|---|---|
+| `0x00`–`0x0F` | 128-bit map of **virtual** lines: each line after its physical function | ***verified*** |
+| `0x10`–`0x1F` | 128-bit map of **logical** lines | ***verified*** (it matched the virtual map in every test) |
+| `0x20`–`0x2F` | four 32-bit words about the Boolean records, bit *k* = record *k*: a flag, then three bit-planes of a 3-bit state | ***verified*** that active records set their bits; the meaning of the three planes is not known |
+| `0x30`–`0x31` | four nibbles the tool shows as "MSw" — the modal switches | static |
+
+**Report `0x08`: service data, by subtype in byte 0.**
+
+| Byte 0 | Contents | |
+|---|---|---|
+| `0x05` | bus statistics: bytes 1–8 = eight sensor error levels; bytes `0x11`–`0x18` = one per external-device slot, 0 = not polled, otherwise error percent + 1 | ***verified***: after short command `0x16` argument 5 the stick sends this about fifteen times a second until it restarts. Slot 0, the grip, read 1: polled, no errors |
+| `0x13` | encoder status: byte 1 = a running sequence number, byte 2 = number of encoders, then 16-bit positions ([`PRIOR-ART.md`](PRIOR-ART.md)) | ***verified***: sent about eight times a second while "Virtual BUS over USB" (block `0x013` bit 5) is on; one encoder, position 0 |
+| `0x37` | eight signed 14-bit raw sensor positions, used by the tool's detent pages | static; only for throttle families |
+
+**Report `0x0B`.** The tool ignores it. ***Verified***: it appears alongside `0x08`/`0x13`
+when Virtual BUS is on, as `05` followed by five bytes, two of which change from report to
+report. Not decoded.
+
+**Reports `0x09` and `0x12`** are not in the descriptor by default. Turning the virtual
+keyboard on (block `0x00B` bit 2) adds `0x09` — a modifier byte and sixteen key codes — and
+turning Multimedia on (`0x017` bit 1) adds `0x12`, one 16-bit consumer usage. Neither was
+ever seen being sent.
+
+The tool's raw-report analyser is a developer feature (ID filter, offset, size, up to 12
+user-defined fields). `Poll_Start` (`0x004246FC`) and `Poll_Stop` only flip host flags:
+nothing is sent to the stick to start any of these reports.
 
 ## 6. LED test packet and other transports *(static)*
 
@@ -338,8 +384,11 @@ never looks at them.
 `A5 0A` feature report without the `ShortCMD` builder. It is called by `btn_Set_LedsClick`
 (`0x00423A98`) and `LED_Fast_Test` (`0x004298BC`) and sent with `SetFeature`, without RC4.
 Offsets from the report-ID byte: 1 = `0xA5`, 2 = `0x0A`, 3 to 4 = CRC-16/MODBUS (LE), 5 to 6 =
-two random bytes (`rand() % 255`), 7 = N (number of entries), 8 on = N entries of 4 bytes,
-`{LED index & 0x7F, three more bytes}`. The CRC covers `3N + 3` bytes from offset 5 while the
+two random bytes (`rand() % 255`), 7 = N (number of entries, at most 30), 8 on = N entries of 4
+bytes, `{LED index & 0x7F, three more bytes}`. The three bytes are a 24-bit little-endian word
+in the format of a stored LED event: two colours of three 3-bit channels, then a 3-bit mode
+(off, constant, slow, fast, ultra-fast) and a 3-bit colour mode. No token is involved. The
+override lasts until the stick restarts. The CRC covers `3N + 3` bytes from offset 5 while the
 entries are 4 bytes each; both figures are as read from the code. VKB's own description is in
 [`PRIOR-ART.md`](PRIOR-ART.md). `btn_Set_LedsClick` builds up to 12 entries from the LED sheet
 controls, `LED_Fast_Test` one. Classified benign: a temporary LED override.

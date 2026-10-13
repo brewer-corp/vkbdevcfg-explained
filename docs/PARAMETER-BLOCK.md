@@ -39,6 +39,9 @@ What has actually been confirmed on a device:
 | Response curves: the enable bit, the ten points, the per-axis curve number; anti-deadzone; multiplier; upper gain; bias | physical axis records, `0x0BC`, `0x69A` | As above. A curve point scales the whole axis value by value / 128. |
 | Axis-to-buttons word, and the "Button *N*" logical entry | `0x30C`, `0x20C` | An axis split into four zones held the expected button at rest. |
 | Button tables: logical Button / second button / HAT / No Function / Void; physical Button with shift fields, POV Switch, NoF, SHIFT | `0x10C`, `0x20C` | Tested on two virtual lines held down by axis zones ([`BLOCK-BUTTONS.md`](BLOCK-BUTTONS.md) §11a). |
+| Most physical button functions: Toggle, ButAlt, Radiobutton, Tempo 1 and 2, SubSHIFT, ButtonS, ButtonX, Switch CB, ButtonD, replica button, SHIFT modes, Generator G8 | `0x10C` | Held lines, and a clock built from a generator and a Boolean record ([`BLOCK-BUTTONS.md`](BLOCK-BUTTONS.md) §11a). |
+| Boolean records: inputs, layers, inversions, outputs, AND / OR / XOR | `0x4F0` | As above. |
+| Pulse and tempo times; number of hats; "Virtual BUS over USB" | `0x014`, `0x016`, `0x01A`, `0x01E`, `0x013` | Measured pulse widths; the HID descriptor; new reports appearing. |
 | Filter grade, physical axis 7 | `0x0B5` bits 5–7 | Written and read back. Its effect has not been observed. |
 
 And what real profiles show by difference:
@@ -90,13 +93,13 @@ VKBDevCfg, save again, and run `tools/vkb_cfg.py diff` on the two files.
 | `0x330` | `0x3AF` | external devices, 8 × 16 bytes | [global](BLOCK-GLOBAL.md) |
 | `0x3B0` | `0x3B7` | LED channel masks | [global](BLOCK-GLOBAL.md) |
 | `0x3B8` | `0x4EF` | LED events, up to 52 × 6 bytes | [global](BLOCK-GLOBAL.md) |
-| `0x4F0` | `0x5DF` | Boolean function records | [buttons](BLOCK-BUTTONS.md) |
+| `0x4F0` | `0x5DF` | Boolean function records, 8 bytes each | [buttons](BLOCK-BUTTONS.md) |
 | `0x5E0` | `0x5EF` | more global options (brightness, release time) | [global](BLOCK-GLOBAL.md) |
-| `0x5F0` | `0x619` | POV 2 and 3 at `0x600`/`0x604`; the rest not decoded | [global](BLOCK-GLOBAL.md) |
+| `0x5F0` | `0x619` | encoder multiplier table, 8 × 2 bytes; POV 2 and 3 at `0x600`/`0x604` | [buttons](BLOCK-BUTTONS.md), [global](BLOCK-GLOBAL.md) |
 | `0x61A` | `0x659` | logical axes 8–15 | [axes](BLOCK-AXES.md) |
 | `0x65A` | `0x699` | physical axes 8–15 | [axes](BLOCK-AXES.md) |
 | `0x69A` | `0x6B9` | per-axis curve number and anti-deadzone, 16 × 2 bytes | [axes](BLOCK-AXES.md) |
-| `0x6BA` | `0x78F` | referenced by button code; not decoded; zero in the sample | — |
+| `0x6BA` | `0x78F` | pulse extension of the Boolean records, 4 bytes each; zero in the sample | [buttons](BLOCK-BUTTONS.md) |
 | `0x790` | `0x7CF` | per-axis trimmer and virtual-input source, 16 × 4 bytes | [axes](BLOCK-AXES.md) |
 | `0x7D0` | `0x7FF` | LED gauge records, 4 × 12 bytes | [global](BLOCK-GLOBAL.md) |
 | `0x800` | `0x8FF` | extension of the physical button table, 128 × 2 bytes | [buttons](BLOCK-BUTTONS.md) |
@@ -170,9 +173,11 @@ most for building an editor:
   recomputes the CRC. Nothing observed says it rejects a configuration that
   makes no sense, and the vendor tool warns that an incompatible profile can
   leave a device inoperable.
-- **Parameters of the less common button functions** — Generator, Tempo,
-  Trimmer, the Boolean operand layout — and the names in the System,
-  Multimedia, Audio and Application lists.
+- **Which control is wired to which line.** The vendor tool's diagram tables
+  say; nobody has pressed the buttons to check.
+- **The functions that act on axes** — AUX, Fix Axes, Trimmer, Curves — whose
+  layouts are read from the tool but untested, and the keyboard and media-key
+  outputs, which were never seen on the wire.
 - **The "Advanced Mapping" virtual layer** at `0x900`–`0xAFF`.
 - **Detent sets**, beyond their position and size.
 - **How calibration values are computed.** The block holds the results; the

@@ -11,16 +11,18 @@ Gladiator EVO R (firmware 2.20.C) and two saved profiles from another unit of
 the same model — in the sense that it reads as a sensible configuration. That is
 a consistency check, not a proof of what the firmware does with each field.
 
-**No field in this document has been exercised on hardware**, with two
-exceptions, both observed on a real device and marked ***verified***:
+**A handful of fields here have been exercised on hardware**; they are marked
+***verified*** where they appear:
 
 - `block[4:8]` is a CRC-32 — the STM32 hardware CRC — of `block[8:4096]`. The
   device recomputes it itself on every write, whatever the host sends
   ([`PROTOCOL.md`](PROTOCOL.md) §4–§5).
 - `block[8:10]` is the firmware version word (`0x220C` on firmware 2.20.C) and
-  `block[2]` is the device type id (`0x11` on a Gladiator EVO R), which the
-  vendor tool compares before writing. What happens on a mismatch was not tried
-  on a device ([`PROTOCOL.md`](PROTOCOL.md) §5).
+  `block[2]` is the device type id (`0x11` on a Gladiator EVO R). The stick
+  keeps its own type id whatever it is sent ([`PROTOCOL.md`](PROTOCOL.md) §5).
+- The pulse times T_Tgl and T_Gen, the tempo time, the number of hats, the
+  virtual-keyboard and multimedia switches (as far as the HID descriptor), and
+  "Virtual BUS over USB" (§1).
 
 Two labels are used, as in [`PROTOCOL.md`](PROTOCOL.md):
 
@@ -113,7 +115,7 @@ Real-block values are decoded in the subsection after the table.
 | `0x00A` | all | unknown (`ctl 0x4`) | The whole byte is stored for any control class; no settings page registers `ctl 0x4` in the global lists. `0xC4` in the real block. | medium (field) / low (meaning) | `ctl 0x4` (cases at `0x00546601`, `0x00515543`) |
 | `0x00B` | 0 | **Cal** (calibration status) | Checkbox "Calibration". `btnReadParamClick` tests `block[0x00B] & 1 == 0` (not calibrated) to decide whether to prompt for auto-calibration. | high | `ctl 0x3E7` (case at `0x0056EC71`, in `TabSheetStandardActivate`) |
 | `0x00B` | 1 | **Hide** | Checkbox, caption "Hide", hint "Vendor-device" (hides the device). | high | `ctl 0x6` (case at `0x00546C57`) |
-| `0x00B` | 2 | **virtual keyboard enabled** | `cmbKeyboardType`: item index 0 gives bit 2 = 0; any other index gives bit 2 = 1 and sets bit 3 of `0x01C` to `(index − 1) & 1`. `POVChange` and the function at `0x00515124` test this bit. | high | `ctl 0x7` (case at `0x0054741E`; instructions `0x00547B8A`–`0x00547BBA`); `POVChange` `0x0042CFFC` |
+| `0x00B` | 2 | **virtual keyboard enabled** | ***Verified*** that it adds a keyboard (report `0x09`) to the HID descriptor; no key report was ever seen. `cmbKeyboardType`: item index 0 gives bit 2 = 0; any other index gives bit 2 = 1 and sets bit 3 of `0x01C` to `(index − 1) & 1`. `POVChange` and the function at `0x00515124` test this bit. | high | `ctl 0x7` (case at `0x0054741E`; instructions `0x00547B8A`–`0x00547BBA`); `POVChange` `0x0042CFFC` |
 | `0x00B` | 3 | **Map** | Checkbox "Mapping of logical layer (Option2)". | high | `ctl 0x8` (case at `0x00547BBF`) |
 | `0x00B` | 4 | **Eco** | Checkbox "Eco". Its hint reads "allows to control virtual keyboard connection time" (VKB manual §2.3.1); the localisation key of the hint is `POWER_OFF_IN_SUSPEND_MODE`. | high | `ctl 0x9` (case at `0x00548390`) |
 | `0x00B` | 5 | mixing-curve type | Combo, 1 bit; hint "Type of mixing curve", caption "Tr.Mix.Curve". | medium | `ctl 0x31` (case at `0x00559920`) |
@@ -142,14 +144,14 @@ Real-block values are decoded in the subsection after the table.
 | `0x013` | 0 | unknown | `v & 1`; the control was not found. | low | `ctl 0x13` (case at `0x0054C1C5`) |
 | `0x013` | 1 | **Enable Fix Axes** | Checkbox. | high | `ctl 0x14` (case at `0x0054C978`) |
 | `0x013` | 2–4 | **D.Rate** | Combo "Rate value for 'double rate' function"; items 1:2, 1:3, 1:4, 2:3, 3:4. | high | `ctl 0x15` (case at `0x0054D13F`) |
-| `0x013` | 5 | show-registers flag | Tested by `ExtRegsShowEnable` (`block[0x013] & 0x20`) alongside the three port bytes. No writer found. | medium (read) | `ExtRegsShowEnable` `0x0042C99C` |
+| `0x013` | 5 | **Virtual BUS over USB** | Checkbox `cbVrtualBUS` on the external sheet. ***Verified***: with it set the stick streams report `0x08` subtype `0x13` (encoder status) and report `0x0B` ([`COMMANDS.md`](COMMANDS.md) §5). The tool also uses it, in `ExtRegsShowEnable`, to decide whether to show register captions. | high | `ctl 0x389` (case at `0x00569B31`); `ExtRegsShowEnable` `0x0042C99C` |
 | `0x013` | 6 | "Invert data", SPI1 | Checkbox; active only when SPI1 port mode is 1. | high | `ctl 0x3B` (case at `0x0055D6FC`; store at `0x0055DE79`) |
 | `0x013` | 7 | "Invert data", SPI2 | Checkbox; active only when SPI2 port mode is 1. | high | `ctl 0x3C` (case at `0x0055DE98`) |
-| `0x014` | u8 ms | **T_Tgl** | Time of toggle pulse; track 0–255. `0x32` (50 ms) in the real block. | high | `ctl 0x18` (case at `0x0054D910`) |
+| `0x014` | u8 ms | **T_Tgl** | Time of toggle pulse; track 0–255. `0x32` (50 ms) in the real block. ***Verified***: Toggle and Tempo pulses measured 51 ms, and 119 ms with the field at 120. | high | `ctl 0x18` (case at `0x0054D910`) |
 | `0x015` | u8 ms | **T_Enc** | Time of encoder pulse. 50 in the real block. | high | `ctl 0x19` (case at `0x0054E05F`) |
-| `0x016` | u8 ms | **T_Gen** | Time of generator pulse. 50 in the real block. | high | `ctl 0x1A` (case at `0x0054E7AE`) |
+| `0x016` | u8 ms | **T_Gen** | Time of generator pulse. 50 in the real block. ***Verified***: a G8 generator's period is twice this value, at 50, 100 and 250. | high | `ctl 0x1A` (case at `0x0054E7AE`) |
 | `0x017` | 0 | **System control** keys | `cb_System_control`. | high | `ctl 0x1B` (case at `0x0054EEFD`) |
-| `0x017` | 1 | **Multimedia** keys | `cb_Multimedia`. | high | `ctl 0x1C` (case at `0x0054F6B0`) |
+| `0x017` | 1 | **Multimedia** keys | `cb_Multimedia`. ***Verified*** that it adds a consumer-control collection (report `0x12`) to the HID descriptor. | high | `ctl 0x1C` (case at `0x0054F6B0`) |
 | `0x017` | 2–4 | key-matrix size (rows) | Spin 0–5; hint "Matrix size(rows)". | high | `ctl 0x1D` (case at `0x0054FE77`) |
 | `0x017` | 5–7 | key-matrix width (columns) − 1 | Spin 1–8; hint "Matrix width (columnS)"; stored `(v − 1) & 7`, the write masks the old value with `0x1F`. Bits 0–1 of this byte are also read by the function at `0x0071FA18`, which was not examined. | medium | `ctl 0x1E` (case at `0x00550648`) |
 | `0x018` | 0–3 | Basic virtual register | Spin 1–16, stored `v & 0xF` (16 becomes 0). | medium | `ctl 0x1F` (case at `0x00550DD3`) |
@@ -160,14 +162,14 @@ Real-block values are decoded in the subsection after the table.
 | `0x01A` | 0–1 | **SD** delay of start controller | Edit, `StrToInt & 3`; hint "Delay of start controller" (0–3). | high | `ctl 0x24` (case at `0x0055351D`) |
 | `0x01A` | 2 | Use Global SHIFTs | – | medium | `ctl 0x384` (case at `0x00567B93`) |
 | `0x01A` | 3 | Use Global SubSHIFTs | – | medium | `ctl 0x385` (case at `0x00568364`) |
-| `0x01A` | 4–6 | **TEMPO** function time | Combo "Tempo function Time, ms"; items 100, 150, 200, 250, 300, 400, 500, 1000. | high | `ctl 0x26` (case at `0x00554483`) |
+| `0x01A` | 4–6 | **TEMPO** function time | Combo "Tempo function Time, ms"; items 100, 150, 200, 250, 300, 400, 500, 1000. ***Verified*** at index 0 and 4: a 295 ms press is long at 100 ms and short at 300. | high | `ctl 0x26` (case at `0x00554483`) |
 | `0x01A` | 7 | MODE (FA0 mode), low bit | See `0x00F` bit 4. | medium | `ctl 0xB` |
 | `0x01B` | all | **User profile ID** | Edit, 0–255. Shown by `TForm36::FormCreate` as "ProfileID" and passed to `GetUserProfileName`. | high | `ctl 0x28` (case at `0x00555425`); `0x0070FF7C`; `TForm36::FormCreate` `0x00489D8C` |
 | `0x01C` | 0–2 | **MAX FPS** (polling frequency) | Combo, hint "Polling frequency, Hz"; items 250, 125, 83, 62, 50, 40, 33, 25. | high | `ctl 0x29` (case at `0x00555B74`); item list in `SheetOption0Activate` |
 | `0x01C` | 3 | keyboard Classic (0) / Modified (1) | Set from `cmbKeyboardType` (`0x00B` bit 2). | medium | `ctl 0x7` |
 | `0x01C` | 4–6 | TimeDR | "Time of transition Axis(Fix,Double Rate), mS". | medium | `ctl 0x2B` (case at `0x00556ADA`) |
 | `0x01D` | all | **#But** number of logical buttons | Track 0–128. Also copied into the global at `0x00DAB43C` after a read. `0x80` (128) in the real block. | high | `ctl 0x2D` (case at `0x00557A7C`); `btnReadParamClick` |
-| `0x01E` | 0–2 | **#POV** number of HATs | Spin 0–4. | high | `ctl 0x2E` (case at `0x005581CB`) |
+| `0x01E` | 0–2 | **#POV** number of HATs | Spin 0–4. ***Verified***: each hat adds a hat switch to the HID descriptor; the report always has four 16-bit hat slots. | high | `ctl 0x2E` (case at `0x005581CB`) |
 | `0x01E` | 3–5 | **VC** virtual HID controllers | Combo: No, 1, 2, 3. | high | `ctl 0x2F` (case at `0x0055897E`) |
 | `0x01F` | 0 | "GNX MOD" checkbox | Shown when the globals at `0x00F081AA` and `0x00F081D2` are set. | low–medium | `ctl 0x3E2` (case at `0x0056CD3E`) |
 | `0x01F` | 1–6 | spin 8–40 (n − 1) | External sheet; shown when the global at `0x00F081D6` is set. | low–medium | `ctl 0x3E` (case at `0x0055EE0B`; store at `0x0055F586`) |
