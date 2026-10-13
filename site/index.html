@@ -805,6 +805,21 @@ sudo python3 tools/vkb_hid.py write new.bin <span class="hi">--yes</span></code>
     stick's status word, waits out the restart, reads the block back and compares.
   </p>
 
+  <h3>If a write goes wrong</h3>
+  <p>
+    While the stick still enumerates, the fix is another write: <code>vkb_hid.py write</code>
+    with the backup it saved. If a bad configuration stops the stick appearing at all, the
+    management plane is gone with it, and the way back is the one VKB's manual documents: force
+    the controller into its bootloader with the hardware control on the board — a BOOT jumper on
+    most controllers, a button combination held while plugging in on some — then reflash the
+    firmware with VKB's own ZBootloader. The manual warns that some firmware versions reset
+    the configuration to defaults, so keep the saved block. <span class="pill static">From the manual</span>
+  </p>
+  <p>
+    That route has not been exercised here, and the manual on hand does not give the
+    combination for the Gladiator NXT EVO base. Find it before you need it.
+  </p>
+
   <div class="note warn">
     <span class="tag">Caution</span>
     <p>
@@ -829,7 +844,7 @@ sudo python3 tools/vkb_hid.py write new.bin <span class="hi">--yes</span></code>
     <div class="tile">
       <h4>Find out what the stick refuses</h4>
       <p>A damaged or truncated transfer bounces. A block carrying the wrong model ID does not: the stick keeps its own ID and stores the rest. Nothing suggests it checks the contents.</p>
-      <p>To do: learn the recovery path through the bootloader before testing a deliberately bad field.</p>
+      <p>To do: confirm the recovery path below on this model before testing a deliberately bad field.</p>
     </div>
     <div class="tile">
       <h4>Other models, other firmware</h4>

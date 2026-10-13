@@ -342,8 +342,14 @@ between here and that UI is the field map, which is partial —
    with `RAM` selected.
 6. **Macros.** Transferred by their own pair of long commands and saved in
    their own `.mcr` files. Located, not decoded.
-7. **Firmware images** (`.vkb`) have a plaintext header and an encrypted body.
-   Not attempted, and not needed for configuration.
+7. **Firmware images** (`.vkb`) have an 80-byte plaintext header (model name,
+   version word, build date) and an encrypted body; no two images share
+   ciphertext. Not attempted, and not needed for configuration.
+8. **The recovery path.** The vendor manual documents hardware entry into the
+   bootloader (a BOOT jumper, or a button combination held while plugging in)
+   followed by a reflash with ZBootloader, and warns that some firmware
+   versions reset the configuration. Not exercised here; the combination for
+   the Gladiator NXT EVO base is not in the manual on hand.
 
 ~~Where does the RC4 key come from, and is it stable?~~ **Closed.** Two keys,
 both constant — §6, §7.

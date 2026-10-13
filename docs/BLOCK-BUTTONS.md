@@ -554,9 +554,9 @@ Open points about what this block shows:
   an **Encoder**, mode 3, a 4-byte record spanning both entries, with
   b1 = b2 = b3 = 0. This is the tool's default for an Encoder placed on line 0
   (every output = the line's own number), so it is most likely an unconfigured
-  placeholder (medium). Whether the Gladiator EVO R grip has a rotary encoder was
-  not verified; the alternative is factory template data (low, as to physical
-  meaning).
+  placeholder (medium). VKB's firmware guide for this model shows the EVO *base*
+  carrying a rotary encoder on its right side, which fits an Encoder record on
+  the first two lines; that this record is that encoder is still an inference.
 - The logical entries of lines 0 and 1 are Buttons 23 and 24. The analysis first
   suggests these might be the encoder's clockwise and counter-clockwise outputs
   (with a question mark), and later states they are unrelated because logical
