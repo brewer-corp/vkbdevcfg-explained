@@ -18,11 +18,13 @@ export function Buttons({ ed, live }: { ed: Editor; live: LiveState | null }) {
     const unused = ed.block[pe] === 0xff && ed.block[pe + 1] === 0xff && ed.block[le] === 0xff;
     const continuation: boolean = skip;
     skip = !continuation && p.wide;
-    if (unused && !all) continue;
+    const control = ed.controls.get(line + 1);
+    if (unused && !control && !all) continue;
     const changed = [pe, pe + 1, le, le + 1].some((o) => ed.block[o] !== ed.original[o]);
     rows.push(
       <tr key={line} className={`${changed ? 'changed' : ''} ${unused ? 'unused' : ''} ${live?.lines.has(line + 1) ? 'pressed' : ''}`}>
         <td className="num">{line + 1}</td>
+        <td>{control ? <>{control.name} <span className="dim">{control.owner}</span></> : <span className="dim">—</span>}</td>
         <td>{continuation ? <span className="dim">↳ part of line {line}</span> : <b>{p.kind}</b>}</td>
         <td className="dim">{continuation ? '' : p.detail}</td>
         <td>
@@ -42,9 +44,11 @@ export function Buttons({ ed, live }: { ed: Editor; live: LiveState | null }) {
         something it sends to the PC. Here you can change which joystick button a line sends.
       </p>
       <label className="toggle"><input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Show all 128 lines</label>
+      {ed.controls.size > 0 && <p className="note">Control names are VKB’s, taken from the diagram in their own tool. They match this stick’s
+        factory setup but have not been checked by pressing each control — the live highlight is the test.</p>}
       {live && <p className="note ok">Live: press a control on the stick and its line lights up here, whatever it is set to do.</p>}
       <table className="lines">
-        <thead><tr><th>Line</th><th>It is a</th><th></th><th>Sends button</th><th>Raw (job · output)</th></tr></thead>
+        <thead><tr><th>Line</th><th>Control</th><th>It is a</th><th></th><th>Sends button</th><th>Raw (job · output)</th></tr></thead>
         <tbody>{rows}</tbody>
       </table>
     </>

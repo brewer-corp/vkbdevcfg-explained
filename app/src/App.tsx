@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { diffBlocks } from './core/block';
 import { webHidAvailable } from './core/webhid';
+import { Control, wiring } from './core/wiring';
 import { Session, connectDemo, connectDevice, grantedSticks, openFile } from './session';
 import { Overview } from './ui/Overview';
 import { Axes } from './ui/Axes';
@@ -26,6 +27,8 @@ export interface Editor {
   edit: (mutate: (b: Uint8Array) => void) => void;
   canEdit: (conf: 'verified' | 'static') => boolean;
   experimental: boolean;
+  /** The vendor's name for the control on each line (1-based), where it has one. */
+  controls: Map<number, Control>;
 }
 
 export function App() {
@@ -108,7 +111,7 @@ export function App() {
   }
 
   const editor: Editor = {
-    block, original: session.original, experimental,
+    block, original: session.original, experimental, controls: wiring(block, session.productId),
     edit: (mutate) => { const next = new Uint8Array(block); mutate(next); setBlock(next); },
     canEdit: (conf) => conf === 'verified' || experimental,
   };

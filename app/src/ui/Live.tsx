@@ -58,6 +58,7 @@ export function Live({ ed, live }: { ed: Editor; live: LiveState | null }) {
   const f = (k: string) => LOGICAL_AXIS.find((d) => d.key === k)!;
   const lineFor = new Map<number, number>();
   for (let l = 0; l < LINES; l++) { const b = logicalFunction(ed.original, l).button; if (b !== null) lineFor.set(b, l + 1); }
+  const named = (line: number) => (ed.controls.has(line) ? `${line} ${ed.controls.get(line)!.name}` : String(line));
   return (
     <>
       <p className="intro">
@@ -83,22 +84,22 @@ export function Live({ ed, live }: { ed: Editor; live: LiveState | null }) {
           <span><em className={`pill ${live.shift1 ? 'ok' : ''}`}>SHIFT1</em><em className={`pill ${live.shift2 ? 'ok' : ''}`}>SHIFT2</em></span></div>
       </section>
       <section className="panel">
-        <h2>Lines <small className="dim">{live.lines.size ? `active: ${[...live.lines].join(', ')}` : 'none active'}</small></h2>
+        <h2>Lines <small className="dim">{live.lines.size ? `active: ${[...live.lines].map(named).join(', ')}` : 'none active'}</small></h2>
         <p className="dim">The input side: one cell per wired line, lit while its contact is closed — whatever the line is set up to do.
-          Press a control to find its line number.</p>
+          Press a control to find its line number.{ed.controls.size > 0 && ' Hover a cell for the name VKB gives its control.'}</p>
         <div className="btngrid">
           {[...Array(128).keys()].map((i) => (
             <span key={i} className={`${live.lines.has(i + 1) ? 'on line' : ''} ${physicalFunction(ed.original, i).kind !== 'Button' || ed.original[physicalEntry(i)] !== 0xff || ed.original[physicalEntry(i) + 1] !== 0xff ? 'mapped' : ''}`}
-              title={`line ${i + 1}: ${physicalFunction(ed.original, i).kind}`}>{i + 1}</span>
+              title={`line ${named(i + 1)}: ${physicalFunction(ed.original, i).kind}`}>{i + 1}</span>
           ))}
         </div>
       </section>
       <section className="panel">
-        <h2>Buttons sent <small className="dim">{live.buttons.size ? [...live.buttons].map((b) => `button ${b}${lineFor.has(b) ? ` (line ${lineFor.get(b)})` : ''}`).join(', ') : 'none pressed'}</small></h2>
+        <h2>Buttons sent <small className="dim">{live.buttons.size ? [...live.buttons].map((b) => `button ${b}${lineFor.has(b) ? ` (line ${named(lineFor.get(b)!)})` : ''}`).join(', ') : 'none pressed'}</small></h2>
         <div className="btngrid">
           {[...Array(128).keys()].map((i) => (
             <span key={i} className={`${live.buttons.has(i + 1) ? 'on' : ''} ${lineFor.has(i + 1) ? 'mapped' : ''}`}
-              title={lineFor.has(i + 1) ? `sent by line ${lineFor.get(i + 1)}` : 'not mapped'}>{i + 1}</span>
+              title={lineFor.has(i + 1) ? `sent by line ${named(lineFor.get(i + 1)!)}` : 'not mapped'}>{i + 1}</span>
           ))}
         </div>
       </section>

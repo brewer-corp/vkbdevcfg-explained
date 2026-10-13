@@ -7,6 +7,7 @@ import { LOGICAL_AXIS, PHYSICAL_AXIS, extDevice, ledEvent, logicalAxisBase, logi
   physicalFunction, readField, setLogicalButton, writeField, inputType } from './schema';
 import { existsSync, readFileSync } from 'node:fs';
 import { parseInput } from '../ui/Live';
+import { extRegisters, wiring } from './wiring';
 
 const text = (s: string) => new TextEncoder().encode(s);
 
@@ -156,5 +157,45 @@ describe('live input report', () => {
   it('ignores the tail without its 0xA5 marker', () => {
     const d = new Uint8Array(idle); d[0x2e] = 0;
     expect(parseInput(d, 1).lines.size).toBe(0);
+  });
+});
+
+describe('wiring: the vendor diagram\'s control names', () => {
+  const b = demoBlock();
+  it('places a grip by its first register', () => {
+    expect(extRegisters(b, 0)).toEqual({ type: 8, first: 2, count: 4 });
+    const w = wiring(b);
+    expect(w.get(10)).toEqual({ name: 'Trigger 1', owner: 'SCG' });
+    expect(w.get(13)?.name).toBe('Mini-stick push');
+    expect(w.get(36)?.name).toBe('Rapid fire down');
+    expect(w.has(37)).toBe(false);                      // the grip's four spare lines
+    const moved = new Uint8Array(b); moved[0x334] = 0x43;
+    expect(wiring(moved).get(18)?.name).toBe('Trigger 1');
+    expect(wiring(moved).has(1)).toBe(false);           // no longer the layout a Gladiator base implies
+  });
+  it('agrees with the factory configuration', () => {
+    const w = wiring(b);
+    // every hat direction the diagram names sits on a line set up as that direction of the POV switch
+    for (const [line, dir] of [[17, 'down'], [18, 'up'], [19, 'left'], [20, 'right']] as const) {
+      expect(w.get(line)?.name).toBe(`A1 ${dir}`);
+      expect(physicalFunction(b, line - 1).detail).toBe(`hat 1, ${dir}`);
+    }
+    expect(physicalFunction(b, 0).kind).toBe('Encoder');
+    expect(w.get(1)?.owner).toBe('Base');
+  });
+  it('names the base only for a Gladiator', () => {
+    expect(wiring(b, 0x0200).get(6)).toEqual({ name: 'F1', owner: 'Base' });
+    expect(wiring(b, 0x0126).has(6)).toBe(false);       // a Gunfighter has no register of its own
+    expect(wiring(b, 0x0126).get(10)?.name).toBe('Trigger 1');
+  });
+  it('swaps A4 left and right on the left-hand grip', () => {
+    const l = new Uint8Array(b); l[0x332] = 0x49;
+    expect(wiring(b).get(27)?.name).toBe('A4 left');
+    expect(wiring(l).get(27)).toEqual({ name: 'A4 right', owner: 'SCG-L' });
+    expect(wiring(l).get(28)?.name).toBe('A4 left');
+  });
+  it('names nothing without a known grip', () => {
+    const none = new Uint8Array(b); none.fill(0, 0x330, 0x340);
+    expect(wiring(none).size).toBe(0);
   });
 });
