@@ -334,7 +334,11 @@ between here and that UI is the field map, which is partial —
    rest are catalogued in [`COMMANDS.md`](COMMANDS.md) from the binary. None has
    been sent.
 5. **The `RAM` target.** The device acknowledges writes to it and applies
-   nothing. What it is for is unknown.
+   nothing — the change is absent from both copies even before the restart.
+   What it is for is unknown. Candidates: it stages data for a commit command
+   that was never sent; it addresses a profile slot on other device families;
+   or it is vestigial. The next step is a USB capture of VKBDevCfg writing
+   with `RAM` selected.
 6. **Macros.** Transferred by their own pair of long commands and saved in
    their own `.mcr` files. Located, not decoded.
 7. **Firmware images** (`.vkb`) have a plaintext header and an encrypted body.

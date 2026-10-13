@@ -574,9 +574,54 @@
     <li><strong>The handshake reply leaks.</strong> The bytes around the token are whatever was last
       in the stick's transfer buffer — including, after a read, part of your configuration in
       plain text.</li>
-    <li><strong>There is a hidden “RAM” target.</strong> The program has a concealed selector for
-      it. The stick acknowledges writes to it, restarts, and changes nothing.</li>
   </ul>
+
+  <h3>Two targets: flash and RAM</h3>
+  <p>
+    A microcontroller has two kinds of memory. <strong>Flash</strong> is permanent: it survives
+    power-off, and it is where the parameter block is kept. <strong>RAM</strong> is working
+    memory, wiped at every power-up. The usual design — assumed here, since the firmware itself
+    was not examined — is that the firmware copies the block from flash into RAM when it starts,
+    and runs from the copy.
+  </p>
+  <p>
+    VKBDevCfg knows about both. Tucked away in its window is a drop-down with two entries,
+    <code>EEPROM</code> and <code>RAM</code>, that changes nothing but the command number.
+    (“EEPROM” is the program's word. The stick's own error codes say “erase FLASH” and “write
+    FLASH”.)
+  </p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Target</th><th>Read</th><th>Write</th><th>What the stick did</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Flash</strong> (“EEPROM”)</td><td><code>0x02</code></td><td><code>0x24</code></td>
+        <td>Writes take effect. The new block reads back from <em>both</em> targets at once, before the restart, and again after it.</td></tr>
+      <tr><td><strong>RAM</strong></td><td><code>0x03</code></td><td><code>0x25</code></td>
+        <td>Reads work, and always matched flash byte for byte. Writes are answered “block written”, the stick restarts — and neither copy has changed, before the restart or after.</td></tr>
+    </tbody>
+  </table></div>
+  <p>
+    The obvious guess is that the RAM target is a “try it without saving” mode: change the
+    running configuration, keep the stored one. That is not what happens. A one-setting change
+    sent to RAM was read back a quarter of a second later, before the stick had restarted, and
+    was already gone — or was never applied.
+  </p>
+  <p>Explanations that fit, none of them tested:</p>
+  <ul>
+    <li><strong>It needs a second step.</strong> The write may only stage the data, with a separate
+      command to apply it. The program has a family of short commands that were never sent.</li>
+    <li><strong>The restart undoes it.</strong> If the stick reloads from flash when it restarts, a
+      RAM-only change cannot survive — but that does not explain why it was missing <em>before</em>
+      the restart.</li>
+    <li><strong>It is for something else.</strong> Other device families in the program keep several
+      profiles on the stick; on those, the second target may address a profile slot rather than
+      working memory.</li>
+    <li><strong>It is vestigial.</strong> A developer feature the firmware still acknowledges and no
+      longer implements.</li>
+  </ul>
+  <p>
+    What is established is narrower: on this stick and firmware, flash is the only write target
+    that changes anything. <span class="pill verified">Verified</span>
+  </p>
 </section>
 
 <!-- ==================================================================== -->
@@ -777,6 +822,11 @@ sudo python3 tools/vkb_hid.py write new.bin <span class="hi">--yes</span></code>
     <div class="tile">
       <h4>Buttons, in full</h4>
       <p>The function types are decoded. The parameters of the rarer ones — Tempo, Generator, Boolean — and the Advanced Mapping layer are not.</p>
+    </div>
+    <div class="tile">
+      <h4>What is the RAM target for?</h4>
+      <p>The stick accepts writes to a second target, says “block written”, and changes nothing.</p>
+      <p>To do: capture what VKBDevCfg sends with <code>RAM</code> selected, and look for a commit step among the short commands. A working RAM write would mean trying settings without wearing flash or restarting.</p>
     </div>
     <div class="tile">
       <h4>The editor itself</h4>
