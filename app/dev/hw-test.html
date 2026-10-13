@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8"><title>hardware round-trip test</title>
+<!-- Developer tool, not part of the build. Serve with `npm run dev` and open /dev/hw-test.html in a browser
+     that has already been granted the stick, adding ?run. It changes one verified setting, checks it, and restores it. -->
+<pre id="out">Add ?run to the URL to start. This WRITES to the connected stick (and restores it).</pre>
+<script type="module">
+import { connectDevice, grantedSticks, applyToStick, sameConfig } from '/src/session.ts';
+import { PHYSICAL_AXIS, physicalAxisBase, readField, writeField } from '/src/core/schema.ts';
+const out = { steps: [] };
+const say = (s) => { out.steps.push(s); document.getElementById('out').textContent = JSON.stringify(out, null, 1); };
+try {
+  if (!new URLSearchParams(location.search).has('run')) throw new Error('not started: add ?run');
+  const [dev] = await grantedSticks();
+  if (!dev) throw new Error('no granted stick');
+  const s = await connectDevice(dev);
+  const filter = PHYSICAL_AXIS.find((f) => f.key === 'filter'), base = physicalAxisBase(7);
+  const before = readField(s.original, base, filter);
+  say(`read ok: ${s.name.trim()}, filter(slot 8) = ${before}`);
+  const original = new Uint8Array(s.original);
+  const changed = new Uint8Array(original); writeField(changed, base, filter, before === 5 ? 6 : 5);
+  let t = performance.now();
+  s.original = await applyToStick(s, changed, say);
+  say(`changed -> ${readField(s.original, base, filter)} in ${Math.round(performance.now() - t)} ms`);
+  t = performance.now();
+  s.original = await applyToStick(s, original, say);
+  say(`restored -> ${readField(s.original, base, filter)} in ${Math.round(performance.now() - t)} ms`);
+  out.ok = sameConfig(s.original, original);
+  await s.transport.close();
+} catch (e) { out.error = String(e); }
+say('done');
+await fetch('/__result', { method: 'POST', body: JSON.stringify(out) }).catch(() => {});
+document.title = 'DONE ' + JSON.stringify(out);
+</script>
