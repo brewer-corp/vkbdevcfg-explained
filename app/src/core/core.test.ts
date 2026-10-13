@@ -8,6 +8,7 @@ import { LOGICAL_AXIS, PHYSICAL_AXIS, extDevice, ledEvent, logicalAxisBase, logi
 import { existsSync, readFileSync } from 'node:fs';
 import { parseAfter, parseInput } from '../ui/Live';
 import { extRegisters, wiring } from './wiring';
+import { Session, applyToStick } from '../session';
 
 const text = (s: string) => new TextEncoder().encode(s);
 
@@ -242,5 +243,38 @@ describe('button functions, as confirmed on hardware', () => {
     expect(logic([0x74, 0xff])).toMatchObject({ kind: 'Hat', detail: 'hat 1, up' });
     expect(logic([0xff, 0xff])).toMatchObject({ kind: 'Auto', button: 70 });
     expect(logic([0x03, 0xff])).toMatchObject({ kind: 'Keyboard', detail: 'HID key 0x4' });
+  });
+});
+
+describe('writing when the browser forgets the stick at its restart', () => {
+  const setup = async (forgets: boolean) => {
+    const transport = new MockStick({ restartMs: 250 });
+    const stick = new Stick(transport);
+    const original = await stick.readBlock(await stick.readToken());
+    const session: Session = { source: 'demo', name: 'test', original, transport, forgets };
+    const next = new Uint8Array(original); setLogical(next, 9, 'button', 40);
+    return { session, next, transport };
+  };
+  it('asks for the stick again, then verifies as usual', async () => {
+    const { session, next, transport } = await setup(true);
+    const steps: string[] = []; let asked = 0;
+    const stored = await applyToStick(session, next, (s) => steps.push(s), async () => { asked++; return transport; });
+    expect(asked).toBe(1);
+    expect(logicalFunction(stored, 9).button).toBe(40);
+    expect(steps.some((s) => s.startsWith('Written.'))).toBe(true);
+  });
+  it('does not ask when the stick is still known', async () => {
+    const { session, next, transport } = await setup(false);
+    let asked = 0;
+    await applyToStick(session, next, () => {}, async () => { asked++; return transport; });
+    expect(asked).toBe(0);
+  });
+  it('says the write happened if there is nobody to ask', async () => {
+    const { session, next } = await setup(true);
+    await expect(applyToStick(session, next, () => {})).rejects.toThrow(/was written/);
+  });
+  it('notices when a different stick is picked', async () => {
+    const { session, next } = await setup(true);
+    await expect(applyToStick(session, next, () => {}, async () => new MockStick({ restartMs: 250 }))).rejects.toThrow(/picked does not hold/);
   });
 });

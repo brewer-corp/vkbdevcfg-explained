@@ -21,6 +21,12 @@ device node:
 SUBSYSTEM=="hidraw", ATTRS{idVendor}=="231d", MODE="0660", GROUP="plugdev", TAG+="uaccess"
 ```
 
+**After a write the browser asks for the stick again.** A write restarts the stick, which to the
+browser is an unplug. Chrome keeps a site's permission across an unplug only for devices that
+report a USB serial number, and these sticks report none. So the tool waits a few seconds, and
+if the stick is not offered back it shows a **Pick the stick again** button; the write has
+already happened by then, and picking the stick lets the tool read it back and check.
+
 ## How it is put together
 
 | Path | What |
@@ -52,5 +58,5 @@ block carrying the wrong model ID. So the checks are here.
   real stick, with the predicted effect observed. Everything else is locked unless **Experimental
   fields** is switched on.
 
-Verified on one model and firmware: a Gladiator EVO at 2.20.C. See
+Used on two sticks so far, a Gladiator EVO R and a Gladiator Omni L, both on firmware 2.20.C. See
 [`../docs/PROTOCOL.md`](../docs/PROTOCOL.md).

@@ -55,7 +55,7 @@ export function App() {
   // Test hook: ?auto connects to a stick this page was already granted, ?demo opens the demo.
   useEffect(() => {
     const q = new URLSearchParams(location.search);
-    if (q.has('demo')) start(connectDemo, 'Opening the demo…');
+    if (q.has('demo')) start(() => connectDemo(q.has('forget')), 'Opening the demo…');
     else if (q.has('auto')) grantedSticks().then((d) => d[0] && start(() => connectDevice(d[0]), 'Reading the stick…'));
     if (q.has('experimental')) setExperimental(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,7 +92,7 @@ export function App() {
             <button className="choice" disabled={!!busy} onClick={() => fileInput.current?.click()}>
               <b>Open a profile</b><span>A <code>.cfg</code> saved by VKBDevCfg or by this tool. No stick needed.</span>
             </button>
-            <button className="choice" disabled={!!busy} onClick={() => start(connectDemo, 'Opening the demo…')}>
+            <button className="choice" disabled={!!busy} onClick={() => start(() => connectDemo(), 'Opening the demo…')}>
               <b>Try the demo</b><span>A simulated Gladiator EVO. Safe to break.</span>
             </button>
           </div>
@@ -102,7 +102,7 @@ export function App() {
           }} />
           {busy && <p className="busy">{busy}</p>}
           <p className="fine">
-            Verified on one model and firmware: a Gladiator EVO at 2.20.C. On Linux the browser needs
+            Used on two sticks so far, a Gladiator EVO R and a Gladiator Omni L, both on firmware 2.20.C. On Linux the browser needs
             permission to the device (a udev rule). <a href="../">How this works, and how we know.</a>
           </p>
         </main>

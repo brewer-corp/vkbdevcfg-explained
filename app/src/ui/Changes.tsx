@@ -3,7 +3,8 @@ import type { Editor } from '../App';
 import { DiffRun, loadBlockFile, withFixedCrc, writeRefusal } from '../core/block';
 import { hex } from '../core/bytes';
 import { regionOf } from '../core/schema';
-import { Session, applyToStick, asCfg, backupName, download } from '../session';
+import type { Transport } from '../core/protocol';
+import { Session, applyToStick, asCfg, backupName, download, pickAgain } from '../session';
 
 export function Changes({ session, ed, runs, onReplace, onApplied }: {
   session: Session; ed: Editor; runs: DiffRun[];
@@ -12,6 +13,8 @@ export function Changes({ session, ed, runs, onReplace, onApplied }: {
   const [step, setStep] = useState('');
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [backedUp, setBackedUp] = useState(false);
+  // set while a write is waiting for the user to hand the stick back to the page
+  const [picked, setPicked] = useState<null | ((t: Transport) => void)>(null);
   const file = useRef<HTMLInputElement>(null);
   const refusal = writeRefusal(session.original, ed.block);
   const canWrite = session.source !== 'file' && runs.length > 0 && !refusal && !step;
@@ -25,13 +28,22 @@ export function Changes({ session, ed, runs, onReplace, onApplied }: {
     setResult(null);
     if (!backedUp) backup();
     try {
-      const stored = await applyToStick(session, ed.block, setStep);
+      const stored = await applyToStick(session, ed.block, setStep, () => new Promise<Transport>((resolve) => setPicked(() => resolve)));
       onApplied(stored);
       setResult({ ok: true, text: 'Written and verified: the stick now holds this configuration.' });
     } catch (e) {
       setResult({ ok: false, text: e instanceof Error ? e.message : String(e) });
     }
-    setStep('');
+    setStep(''); setPicked(null);
+  }
+
+  async function pick() {
+    try {
+      const t = await pickAgain(session);
+      if (t && picked) { setPicked(null); picked(t); }
+    } catch (e) {
+      setResult({ ok: false, text: e instanceof Error ? e.message : String(e) });
+    }
   }
 
   return (
@@ -61,7 +73,15 @@ export function Changes({ session, ed, runs, onReplace, onApplied }: {
           <button className="btn" disabled={!runs.length || !!step} onClick={() => onReplace(new Uint8Array(session.original))}>Discard changes</button>
           {session.source === 'file' && <span className="dim">Opened from a file — connect a stick to write.</span>}
         </div>
-        {step && <p className="busy">{step}</p>}
+        {step && !picked && <p className="busy">{step}</p>}
+        {picked && (
+          <div className="note">
+            <b>Written — one more click.</b> The stick accepted the configuration and restarted. The browser only
+            remembers a stick like this one while it stays connected, so it has to be picked again before the result
+            can be read back and checked.
+            <div className="row"><button className="btn primary" onClick={pick}>Pick the stick again</button></div>
+          </div>
+        )}
         {result && <div className={`note ${result.ok ? 'ok' : 'warn'}`}>{result.text}</div>}
         {canWrite && (
           <p className="dim">

@@ -18,7 +18,8 @@ a consistency check, not a proof of what the firmware does with each field.
   device recomputes it itself on every write, whatever the host sends
   ([`PROTOCOL.md`](PROTOCOL.md) §4–§5).
 - `block[8:10]` is the firmware version word (`0x220C` on firmware 2.20.C) and
-  `block[2]` is the device type id (`0x11` on a Gladiator EVO R). The stick
+  `block[2]` is the device type id: `0x11` on a Gladiator EVO R, and also on a
+  Gladiator Omni L, so it names a family rather than a model. The stick
   keeps its own type id whatever it is sent ([`PROTOCOL.md`](PROTOCOL.md) §5).
 - The pulse times T_Tgl and T_Gen, the tempo time, the number of hats, the
   virtual-keyboard and multimedia switches (as far as the HID descriptor), and

@@ -45,7 +45,7 @@ export async function grantedSticks(): Promise<HIDDevice[]> {
   return (await navigator.hid.getDevices()).filter((d) => d.vendorId === VKB_VENDOR_ID);
 }
 
-/** Ask the user to pick a stick. Must be called from a click. */
+/** Ask the user to pick a stick. Must be called from a click. Null if they dismissed the chooser. */
 export async function requestStick(): Promise<WebHidTransport | null> {
   const [device] = await navigator.hid.requestDevice({ filters: [{ vendorId: VKB_VENDOR_ID }] });
   return device ? open(device) : null;

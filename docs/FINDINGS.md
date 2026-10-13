@@ -312,7 +312,7 @@ best remaining hope — was never examined, and is no longer needed.
 
 | Approach | Verdict |
 |---|---|
-| **Talk to the device directly** | **Works.** Read and write verified on one device and firmware |
+| **Talk to the device directly** | **Works.** Read and write verified on a Gladiator EVO R; a second stick, a Gladiator Omni L on the same firmware, was read and written with the browser tool by its owner |
 | **Generate a `.cfg`** for the vendor app to apply | **Works** at the file level: output is byte-identical to the vendor's on the samples. Not yet loaded into VKBDevCfg itself |
 | Wrap / automate VKBDevCfg | Unnecessary, and there is nothing to wrap |
 | Host-side software remapper | Still the weakest — the device does the processing |

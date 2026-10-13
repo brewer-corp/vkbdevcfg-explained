@@ -15,7 +15,15 @@ export interface Session {
   /** Reopen-and-read, used after the restart that follows a write. Absent for files. */
   transport?: Transport;
   productId?: number;
+  /** Demo only: act like a browser that forgets the stick when it restarts. */
+  forgets?: boolean;
 }
+
+/**
+ * Called when the browser no longer offers the stick after its restart; resolves once the user has picked it again.
+ * Chrome keeps a permission across a disconnect only for devices with a USB serial number, and these sticks have none.
+ */
+export type Repick = () => Promise<Transport>;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -32,9 +40,9 @@ export async function connectDevice(existing?: HIDDevice): Promise<Session | nul
   return { source: 'device', name: transport.name, original: await readFrom(transport), transport, productId: transport.productId };
 }
 
-export async function connectDemo(): Promise<Session> {
+export async function connectDemo(forgets = false): Promise<Session> {
   const transport = new MockStick({ restartMs: 1500 });
-  return { source: 'demo', name: 'Demo stick (nothing real is connected)', original: await readFrom(transport), transport };
+  return { source: 'demo', name: 'Demo stick (nothing real is connected)', original: await readFrom(transport), transport, forgets };
 }
 
 export function openFile(name: string, data: Uint8Array): Session {
@@ -46,7 +54,7 @@ export { grantedSticks };
 export type Progress = (step: string) => void;
 
 /** Write `next` to the stick, wait out its restart, read it back and compare. Returns the block now stored. */
-export async function applyToStick(session: Session, next: Uint8Array, progress: Progress): Promise<Uint8Array> {
+export async function applyToStick(session: Session, next: Uint8Array, progress: Progress, repick?: Repick): Promise<Uint8Array> {
   if (!session.transport) throw new Error('No stick is connected.');
   const refusal = writeRefusal(session.original, next);
   if (refusal) throw new Error(refusal);
@@ -65,13 +73,17 @@ export async function applyToStick(session: Session, next: Uint8Array, progress:
     throw new Error(`The stick did not accept the configuration (${WRITE_STATUS[status] ?? 'status 0x' + status.toString(16)}). Nothing was changed.`);
 
   progress('The stick is restarting…');
-  session.transport = await reopen(session);
+  let picked = false;
+  session.transport = await reopen(session, progress, repick && (() => { picked = true; return repick(); }));
+  if (session.transport instanceof WebHidTransport) { session.productId = session.transport.productId; session.name = session.transport.name; }
   progress('Reading back to verify…');
   stick = new Stick(session.transport);
   token = await stick.readToken();
   const stored = await stick.readBlock(token);
   if (!sameConfig(stored, wanted))
-    throw new Error('The stick restarted but does not hold the new configuration. Use your backup to restore it.');
+    throw new Error(picked
+      ? 'The stick that was picked does not hold the new configuration. If you have more than one VKB device, reconnect and pick the one you wrote to; otherwise use your backup to restore it.'
+      : 'The stick restarted but does not hold the new configuration. Use your backup to restore it.');
   return stored;
 }
 
@@ -79,25 +91,41 @@ export async function applyToStick(session: Session, next: Uint8Array, progress:
 export const sameConfig = (a: Uint8Array, b: Uint8Array) =>
   a.length === b.length && a.subarray(8).every((x, i) => x === b[8 + i]);
 
-async function reopen(session: Session): Promise<Transport> {
+const WRITTEN_UNCHECKED = 'The configuration was written and the stick restarted, but it did not reappear, so the result could not be checked. Reconnect it and compare.';
+
+async function reopen(session: Session, progress: Progress, repick?: Repick): Promise<Transport> {
   const old = session.transport!;
-  if (!(old instanceof WebHidTransport)) {              // the mock: just wait for it to come back
-    for (let i = 0; i < 60; i++) {
-      await sleep(250);
-      try { await old.receive(); return old; } catch { /* still restarting */ }
+  const ask = () => {
+    if (!repick) throw new Error(WRITTEN_UNCHECKED);
+    progress('Written. Waiting for the stick to be picked again…');
+    return repick();
+  };
+  if (!(old instanceof WebHidTransport)) {              // the mock
+    // It answers for a moment before it goes down, so wait for it to leave first (or to show it is not going to).
+    const t0 = Date.now(); let gone = false, back = false;
+    while (!back && Date.now() - t0 < 15000) {
+      await sleep(100);
+      try { await old.receive(); back = gone || Date.now() - t0 > 1000; } catch { gone = true; }
     }
-    throw new Error('The stick did not come back.');
+    if (!back) throw new Error('The stick did not come back.');
+    return session.forgets ? ask() : old;
   }
   await sleep(1500);
   try { await old.close(); } catch { /* already gone */ }
-  for (let i = 0; i < 50; i++) {
+  // A stick the browser still knows shows up here within about three seconds.
+  for (let i = 0; i < 20; i++) {
     const found = (await grantedSticks()).find((d) => d.productId === session.productId);
     if (found) {
       try { return await openGranted(found); } catch { /* not ready yet */ }
     }
     await sleep(300);
   }
-  throw new Error('The stick did not reappear within 15 seconds. Check it, then reconnect.');
+  return ask();
+}
+
+/** Ask for the stick again after a restart. Must be called from a click; null if the chooser was dismissed. */
+export async function pickAgain(session: Session): Promise<Transport | null> {
+  return session.source === 'demo' ? session.transport ?? null : requestStick();
 }
 
 export function download(name: string, data: Uint8Array): void {
