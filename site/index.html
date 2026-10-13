@@ -363,9 +363,10 @@
   <div class="tablewrap"><table>
     <thead><tr><th>Report</th><th>Type</th><th>Size</th><th>Role</th></tr></thead>
     <tbody>
-      <tr><td><code>0x01</code></td><td>Input</td><td>63 B</td><td>Live state: six axes, a hat, 128 button bits</td></tr>
-      <tr><td><code>0x08</code></td><td>Input</td><td>63 B</td><td>Service packets, such as encoder positions</td></tr>
-      <tr><td><code>0x0B</code> <code>0x0C</code></td><td>Input</td><td>63 B</td><td>Auxiliary state</td></tr>
+      <tr><td><code>0x01</code></td><td>Input</td><td>63 B</td><td>Live state: six axes, a hat, 128 button bits — and, in bytes the descriptor calls padding, which of the 128 lines are active</td></tr>
+      <tr><td><code>0x08</code></td><td>Input</td><td>63 B</td><td>Service packets, off by default: bus statistics, encoder positions</td></tr>
+      <tr><td><code>0x0C</code></td><td>Input</td><td>63 B</td><td>The 128 lines after the stick's own processing. Sent on every change</td></tr>
+      <tr><td><code>0x0B</code></td><td>Input</td><td>63 B</td><td>Off by default; not decoded</td></tr>
       <tr><td><code>0x58</code></td><td>Output</td><td>63 B</td><td class="dim">Not used for configuration</td></tr>
       <tr><td><code>0x59</code></td><td><strong>Feature</strong></td><td>128 B</td><td><strong>All configuration traffic, both directions</strong></td></tr>
     </tbody>
@@ -734,11 +735,43 @@ file     = <span class="b">file CRC</span> + RC4(plain, key)</code></pre>
     enumerated and reported input normally.
   </p>
 
+  <h3>Pressing buttons with nobody there</h3>
+
+  <p>
+    Confirming a field means seeing its effect, and the effect of a button setting shows when
+    someone presses the button. Nobody was at the stick. Three tricks stood in.
+  </p>
+  <ul>
+    <li><strong>A held line.</strong> The firmware can split an axis into zones, each holding a
+      line down while the axis sits in it. The throttle and the centred stick each rest in a
+      zone, which gives two lines that are permanently pressed.</li>
+    <li><strong>A clock.</strong> A held line only tests settings that respond to a level. A
+      toggle responds to a press. But one of the stick's own functions, a pulse generator, runs
+      for as long as its line is held — so a held line can be made to tick.</li>
+    <li><strong>A wire.</strong> The firmware has a table of logic gates. One gate copies the
+      ticking output onto any other line, as if that line's switch were being pressed twice a
+      second. That line then carries whatever is being tested.</li>
+  </ul>
+  <p>
+    About sixty configurations went through this rig: write, wait out the restart, watch the
+    input reports for a few seconds, move on. Pulse widths came out within a millisecond or two
+    of the configured values. Most of the button functions are now confirmed, along with the
+    logic-gate table itself; the misses are listed in
+    <a href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/BLOCK-BUTTONS.md">the button notes</a>.
+  </p>
+  <p>
+    The rig also flushed out a report. At rest the stick sends one kind of input report. Once a
+    line started ticking it sent a second, <code>0x0C</code>, on every change: the state of all
+    128 lines after the stick's own processing. It had always been there; nothing had ever
+    changed for it to announce.
+  </p>
+
   <div class="note tip">
     <span class="tag">Not sent</span>
     <p>
-      No firmware was flashed. Of the program's <em>short commands</em>, only two benign ones were
-      sent, while probing the RAM target: “select profile” and “partial-write mask”. Nothing that
+      No firmware was flashed. Of the program's <em>short commands</em>, three benign ones were
+      sent: “select profile” and “partial-write mask”, while probing the RAM target, and the one
+      that turns on bus statistics. Nothing that
       resets a stick to factory defaults, starts a calibration or enters the bootloader — those
       are catalogued from the code, with a danger rating, and left alone.
     </p>
@@ -839,7 +872,7 @@ sudo python3 tools/vkb_hid.py write new.bin <span class="hi">--yes</span></code>
   <div class="grid">
     <div class="tile">
       <h4>Confirm the field map</h4>
-      <p>About thirty fields are confirmed on the stick: axes, curves, calibration gains, and the main button encodings including hats and SHIFT. LEDs, the rarer button functions and which control is wired to which line are not.</p>
+      <p>Confirmed on the stick: axes, curves, calibration gains, most button functions, hats, the shift layers and the logic-gate table. Not confirmed: LEDs, the functions that act on axes, and keyboard or media-key output, which never appeared on the wire.</p>
       <p>Next: the <a href="app/">config tool</a>'s live view, for fields that need someone to press a button or move the stick.</p>
     </div>
     <div class="tile">
@@ -856,8 +889,12 @@ sudo python3 tools/vkb_hid.py write new.bin <span class="hi">--yes</span></code>
       <p>Reset, defaults, calibration, bootloader, macros. Catalogued from the code; never sent.</p>
     </div>
     <div class="tile">
-      <h4>Buttons, in full</h4>
-      <p>The function types are decoded. The parameters of the rarer ones — Tempo, Generator, Boolean — and the Advanced Mapping layer are not.</p>
+      <h4>Which control is which line</h4>
+      <p>The vendor program draws a labelled photo of each stick from tables in its code: trigger on line 10, hat A1 on 17–20, and so on. They agree with the factory configuration. Nobody has pressed the buttons to check.</p>
+    </div>
+    <div class="tile">
+      <h4>Buttons, the stragglers</h4>
+      <p>One-shot generators produced no pulse, the NOT gate did not invert, and the Cyclic Switch does nothing on this firmware. The Advanced Mapping layer is undecoded.</p>
     </div>
     <div class="tile">
       <h4>What is the RAM target for?</h4>
