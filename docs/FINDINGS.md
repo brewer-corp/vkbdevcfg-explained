@@ -325,11 +325,12 @@ between here and that UI is the field map, which is partial —
    version. The tool carries branches for older block sizes (`0x400`, `0x800`)
    and for a different "profile" layout used by other device families; none of
    that was tested.
-3. **What does the device validate on write?** It checks the transfer CRC and
-   recomputes the block CRC. Whether it rejects out-of-range field values is
-   unknown, and the tool's own warning text suggests an incompatible block can
-   leave a device inoperable. Until that is understood, a UI should refuse to
-   write anything it cannot fully parse.
+3. **What does the device validate on write?** The transfer, not the contents.
+   A wrong CRC-16 and a truncated transfer are both refused with flash
+   untouched. A wrong device type id is not: the stick keeps its own id and
+   stores the rest ([`PROTOCOL.md`](PROTOCOL.md) §5). Whether it rejects
+   out-of-range field values is still unknown, and nothing suggests it does.
+   A UI should refuse to write anything it cannot fully parse.
 4. **Short commands.** Reset, defaults, calibration, bootloader entry and the
    rest are catalogued in [`COMMANDS.md`](COMMANDS.md) from the binary. None has
    been sent.

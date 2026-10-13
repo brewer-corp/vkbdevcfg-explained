@@ -251,12 +251,26 @@ Things worth knowing:
 - **The device does not reject a block it already holds.** An identical write
   returns `block written`, not `no new data`, and still triggers a restart.
 
-What was *not* tested: writing a block for a different device type or firmware
-version, a block with deliberately invalid field values, an interrupted
-transfer, and any other device or firmware. The tool itself warns
-(`msg_WRITE_MODE_IS_FORCED_BY_USER`) that an incompatible profile "may cause
-device inoperability", so `vkb_hid.py write` refuses a block whose type id or
-firmware word differs from the device's.
+### What the stick rejects, and what it does not *(verified)*
+
+| Sent to flash | Status | Restart | Result |
+|---|---|---|---|
+| The stick's own block with a wrong CRC-16 in the header | `22 22 22 22` CRC error | no | nothing written |
+| A transfer that stops after 16 of 33 frames | no acceptance | no | nothing written |
+| A block whose device type id is wrong (`0x12` for `0x11`) | `5A A5 88 00` | yes | **accepted** — the stick kept its own type id |
+| The same, plus one changed setting | `5A A5 88 00` | yes | **the setting was stored**; the type id stayed `0x11` |
+
+So the transfer is protected and the contents are not. The stick owns the
+first eight bytes of the block — it keeps its own type id and computes its own
+CRC — and takes the rest from the host without, as far as this shows,
+comparing anything. **A block built for a different model would be accepted.**
+The type-id check in VKBDevCfg, and the one in `vkb_hid.py`, are the only
+guard, and both are on the host.
+
+Still not tested: a block for a different firmware version, a block with
+out-of-range field values, and any other device or firmware. The vendor tool
+warns (`msg_WRITE_MODE_IS_FORCED_BY_USER`) that an incompatible profile "may
+cause device inoperability".
 
 ## 6. What the encryption is
 

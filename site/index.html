@@ -567,6 +567,10 @@
 
   <h3>Things the stick does that nobody documented</h3>
   <ul>
+    <li><strong>It guards the transfer, not the contents.</strong> A wrong CRC-16 gets “CRC error”
+      and a truncated transfer is dropped; neither touches flash. But a block with the wrong
+      model ID was accepted — the stick kept its own ID and stored everything else. The only
+      check against writing another model's configuration is in the software on the PC.</li>
     <li><strong>It recomputes the CRC itself.</strong> Send a block with the wrong checksum word
       and it stores the right one. A host never has to compute it.</li>
     <li><strong>The request after the handshake gets someone else's answer.</strong> Every time.
@@ -823,8 +827,9 @@ sudo python3 tools/vkb_hid.py write new.bin <span class="hi">--yes</span></code>
       <p>Fix: save a profile, change one setting in VKBDevCfg, save again, diff. No risk to the stick.</p>
     </div>
     <div class="tile">
-      <h4>Find out what the stick rejects</h4>
-      <p>It checks that a transfer arrived intact. Whether it refuses a configuration that makes no sense is unknown.</p>
+      <h4>Find out what the stick refuses</h4>
+      <p>A damaged or truncated transfer bounces. A block carrying the wrong model ID does not: the stick keeps its own ID and stores the rest. Nothing suggests it checks the contents.</p>
+      <p>To do: learn the recovery path through the bootloader before testing a deliberately bad field.</p>
     </div>
     <div class="tile">
       <h4>Other models, other firmware</h4>
