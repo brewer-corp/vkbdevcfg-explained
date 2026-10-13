@@ -1,16 +1,31 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '../App';
-import { AXIS_SLOTS, HID_USAGES, LINES, LOGICAL_AXIS, logicalAxisBase, logicalFunction, readField } from '../core/schema';
+import { AXIS_SLOTS, HID_USAGES, LINES, LOGICAL_AXIS, logicalAxisBase, logicalFunction, physicalEntry, physicalFunction, readField } from '../core/schema';
 import type { Session } from '../session';
 
-/** The stick's live input report (id 0x01): what a game sees. */
-export interface LiveState { axes: number[]; buttons: Set<number>; hat: number; reports: number }
+/** The stick's live input report (id 0x01): what a game sees, plus the stick's own view of its lines. */
+export interface LiveState {
+  axes: number[];
+  /** Joystick buttons currently held, 1-based: the output side. */
+  buttons: Set<number>;
+  hat: number;
+  /** Lines currently active, 1-based: the input side, before any function is applied. */
+  lines: Set<number>;
+  shift1: boolean;
+  shift2: boolean;
+  reports: number;
+}
 
 export function parseInput(data: Uint8Array, reports: number): LiveState {
   const axes = [...Array(8).keys()].map((i) => data[2 * i] | (data[2 * i + 1] << 8));
   const buttons = new Set<number>();
   for (let b = 0; b < 128; b++) if (data[16 + (b >> 3)] & (1 << (b & 7))) buttons.add(b + 1);
-  return { axes, buttons, hat: data[32] & 0x0f, reports };
+  // The report's tail is not padding: 0xA5 at [0x2e] marks it valid, [0x2c] holds the shift state and
+  // [0x2f..0x3f) is a 128-bit map of active lines (confirmed on hardware with held virtual lines).
+  const lines = new Set<number>();
+  const tail = data[0x2e] === 0xa5;
+  if (tail) for (let l = 0; l < 128; l++) if (data[0x2f + (l >> 3)] & (1 << (l & 7))) lines.add(l + 1);
+  return { axes, buttons, hat: data[32] & 0x0f, lines, shift1: tail && !!(data[0x2c] & 1), shift2: tail && !!(data[0x2c] & 2), reports };
 }
 
 /** Subscribe to input reports while a stick is connected; updates at most once per animation frame. */
@@ -64,9 +79,22 @@ export function Live({ ed, live }: { ed: Editor; live: LiveState | null }) {
           );
         })}
         <div className="bar"><span className="name">Hat</span><span className="hat">{live.hat < 8 ? HAT[live.hat] : '·'}</span></div>
+        <div className="bar"><span className="name">Shift</span>
+          <span><em className={`pill ${live.shift1 ? 'ok' : ''}`}>SHIFT1</em><em className={`pill ${live.shift2 ? 'ok' : ''}`}>SHIFT2</em></span></div>
       </section>
       <section className="panel">
-        <h2>Buttons <small className="dim">{live.buttons.size ? [...live.buttons].map((b) => `button ${b}${lineFor.has(b) ? ` (line ${lineFor.get(b)})` : ''}`).join(', ') : 'none pressed'}</small></h2>
+        <h2>Lines <small className="dim">{live.lines.size ? `active: ${[...live.lines].join(', ')}` : 'none active'}</small></h2>
+        <p className="dim">The input side: one cell per wired line, lit while its contact is closed — whatever the line is set up to do.
+          Press a control to find its line number.</p>
+        <div className="btngrid">
+          {[...Array(128).keys()].map((i) => (
+            <span key={i} className={`${live.lines.has(i + 1) ? 'on line' : ''} ${physicalFunction(ed.original, i).kind !== 'Button' || ed.original[physicalEntry(i)] !== 0xff || ed.original[physicalEntry(i) + 1] !== 0xff ? 'mapped' : ''}`}
+              title={`line ${i + 1}: ${physicalFunction(ed.original, i).kind}`}>{i + 1}</span>
+          ))}
+        </div>
+      </section>
+      <section className="panel">
+        <h2>Buttons sent <small className="dim">{live.buttons.size ? [...live.buttons].map((b) => `button ${b}${lineFor.has(b) ? ` (line ${lineFor.get(b)})` : ''}`).join(', ') : 'none pressed'}</small></h2>
         <div className="btngrid">
           {[...Array(128).keys()].map((i) => (
             <span key={i} className={`${live.buttons.has(i + 1) ? 'on' : ''} ${lineFor.has(i + 1) ? 'mapped' : ''}`}

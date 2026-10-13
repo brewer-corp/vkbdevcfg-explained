@@ -6,6 +6,7 @@ import { STATUS_OK, Stick, longWriteFrames } from './protocol';
 import { LOGICAL_AXIS, PHYSICAL_AXIS, extDevice, ledEvent, logicalAxisBase, logicalFunction, physicalAxisBase,
   physicalFunction, readField, setLogicalButton, writeField, inputType } from './schema';
 import { existsSync, readFileSync } from 'node:fs';
+import { parseInput } from '../ui/Live';
 
 const text = (s: string) => new TextEncoder().encode(s);
 
@@ -130,4 +131,30 @@ describe('schema, against the demo block', () => {
   });
   it('withFixedCrc is idempotent', () => expect(withFixedCrc(b)).toEqual(b));
   it('fromHex ignores spacing', () => expect(fromHex('0a 0B-0c')).toEqual(new Uint8Array([10, 11, 12])));
+});
+
+describe('live input report', () => {
+  // A report captured from a Gladiator EVO at rest (data after the report id), with two lines then marked held.
+  const idle = fromHex('0008 0008 0004 aa04 0008 0008 0000 0000' + '00'.repeat(16) + '08' + '0008 0008 0008' + '000000 01 00 00 00 a5 01' + '00'.repeat(15));
+  it('decodes axes, hat, and the line map in the tail', () => {
+    expect(idle.length).toBe(63);
+    const s = parseInput(idle, 1);
+    expect(s.axes).toEqual([2048, 2048, 1024, 1194, 2048, 2048, 0, 0]);
+    expect(s.hat).toBe(8);
+    expect([...s.buttons]).toEqual([]);
+    expect([...s.lines]).toEqual([1]);
+    expect(s.shift1 || s.shift2).toBe(false);
+  });
+  it('reads held lines and shift state', () => {
+    const d = new Uint8Array(idle);
+    d[0x2f + (101 >> 3)] |= 1 << (101 & 7); d[0x2f + (110 >> 3)] |= 1 << (110 & 7); d[0x2c] = 1; d[16 + (101 >> 3)] |= 1 << (101 & 7);
+    const s = parseInput(d, 2);
+    expect([...s.lines]).toEqual([1, 102, 111]);
+    expect([...s.buttons]).toEqual([102]);
+    expect(s.shift1).toBe(true);
+  });
+  it('ignores the tail without its 0xA5 marker', () => {
+    const d = new Uint8Array(idle); d[0x2e] = 0;
+    expect(parseInput(d, 1).lines.size).toBe(0);
+  });
 });

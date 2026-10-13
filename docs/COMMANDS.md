@@ -25,6 +25,13 @@ string (§4) separate three generations, **V20**, **XT** and **XT2**, held in th
 > - The device recomputes the block CRC word itself.
 > - No short command is needed before a read or a write.
 >
+> - Input report `0x01` carries more than joystick state (§5): with two lines held down by
+>   axis zones, `data[0x2F..0x3E]` showed exactly those lines set — a 128-bit map of active
+>   lines, present even for a line whose function sends no button — and `data[0x2C]` bit 0
+>   went to 1 while a SHIFT1 line was held. At rest the stick sends only report `0x01`.
+> - Short command `0x17` with argument 0 (no restart, no change, no acknowledgement) and
+>   `0x14` with argument 1 (acknowledged `5A A5 FE 00`).
+>
 > Everything else in this document is *static*.
 
 ## 1. Short commands *(static)*

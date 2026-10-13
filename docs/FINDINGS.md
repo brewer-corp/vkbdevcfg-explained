@@ -153,7 +153,12 @@ Those last bytes are not padding. Live reports carry `A5` at byte `0x2F`
 (counting the report ID as byte 0), and the vendor tool treats that as a
 validity marker: when it is present, it reads the two SHIFT states and the
 sub-shift mask from the two bytes before it ([`COMMANDS.md`](COMMANDS.md) §5).
-The marker was observed; the shift decoding is from the binary.
+The marker was observed, and so was the rest: with two lines held down by
+axis zones, the 16 bytes after the marker showed exactly those lines set, and
+the SHIFT1 bit rose while a shift line was held. So every input report says
+which of the 128 lines are active, before any function is applied — which is
+how a tool can show "you pressed line 23" for a control that is not mapped to
+anything.
 
 ---
 
