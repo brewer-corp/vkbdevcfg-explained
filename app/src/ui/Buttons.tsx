@@ -2,8 +2,9 @@ import { useState } from 'react';
 import type { Editor } from '../App';
 import { LINES, logicalEntry, logicalFunction, physicalEntry, physicalFunction, setLogicalButton } from '../core/schema';
 import { hex } from '../core/bytes';
+import type { LiveState } from './Live';
 
-export function Buttons({ ed }: { ed: Editor }) {
+export function Buttons({ ed, live }: { ed: Editor; live: LiveState | null }) {
   const [all, setAll] = useState(false);
   const locked = !ed.canEdit('static');
   const rows = [];
@@ -18,7 +19,7 @@ export function Buttons({ ed }: { ed: Editor }) {
     if (unused && !all) continue;
     const changed = [pe, pe + 1, le, le + 1].some((o) => ed.block[o] !== ed.original[o]);
     rows.push(
-      <tr key={line} className={`${changed ? 'changed' : ''} ${unused ? 'unused' : ''}`}>
+      <tr key={line} className={`${changed ? 'changed' : ''} ${unused ? 'unused' : ''} ${l.button !== null && live?.buttons.has(l.button) ? 'pressed' : ''}`}>
         <td className="num">{line + 1}</td>
         <td>{continuation ? <span className="dim">↳ part of line {line}</span> : <b>{p.kind}</b>}</td>
         <td className="dim">{continuation ? '' : p.detail}</td>
@@ -39,6 +40,7 @@ export function Buttons({ ed }: { ed: Editor }) {
         something it sends to the PC. Here you can change which joystick button a line sends.
       </p>
       <label className="toggle"><input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Show all 128 lines</label>
+      {live && <p className="note ok">Live: press a control on the stick and the line that sends its button lights up.</p>}
       {locked && <p className="note">Button mappings come from static analysis and are locked. Turn on <b>Experimental fields</b> to edit them.</p>}
       <table className="lines">
         <thead><tr><th>Line</th><th>It is a</th><th></th><th>Sends button</th><th>Raw (job · output)</th></tr></thead>

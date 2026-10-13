@@ -1,8 +1,9 @@
 // What the bytes mean. Layout from docs/BLOCK-*.md.
 //
-// `conf` says how far to trust a field: 'verified' has been changed on a real stick and read
-// back; 'static' is a reading of the vendor tool's code. The UI only lets static fields be
-// edited in experimental mode.
+// `conf` says how far to trust a field. 'verified' means its effect was observed on a real
+// stick: the field was changed and the stick's HID descriptor or input report changed the way
+// the name predicts (docs/BLOCK-AXES.md records each observation). 'static' is a reading of
+// the vendor tool's code only. The UI lets static fields be edited only in experimental mode.
 
 export type Confidence = 'verified' | 'static';
 
@@ -63,25 +64,25 @@ export const HID_USAGES = ['X', 'Y', 'Z', 'Rot X', 'Rot Y', 'Rot Z', 'Slider', '
 export const INPUT_TYPES = ['D_MaRS', 'Analogue', 'A_MaRS', 'Virtual', 'V_MaRS', 'Trimmer', 'Shunt', '7'];
 
 export const LOGICAL_AXIS: FieldDef[] = [
-  { key: 'en', label: 'Enabled', byte: 0, bit: 4, width: 1, kind: 'bool', conf: 'static' },
-  { key: 'vis', label: 'Visible to the PC', byte: 0, bit: 5, width: 1, kind: 'bool', conf: 'static' },
-  { key: 'inv', label: 'Inverted', byte: 0, bit: 6, width: 1, kind: 'bool', conf: 'static' },
-  { key: 'ctr', label: 'Has a centre', byte: 0, bit: 7, width: 1, kind: 'bool', conf: 'static' },
-  { key: 'src', label: 'Physical axis', byte: 0, bit: 0, width: 4, kind: 'uint', offset: 1, min: 1, max: 16, conf: 'static',
+  { key: 'en', label: 'Enabled', byte: 0, bit: 4, width: 1, kind: 'bool', conf: 'verified' },
+  { key: 'vis', label: 'Visible to the PC', byte: 0, bit: 5, width: 1, kind: 'bool', conf: 'verified' },
+  { key: 'inv', label: 'Inverted', byte: 0, bit: 6, width: 1, kind: 'bool', conf: 'verified' },
+  { key: 'ctr', label: 'Has a centre', byte: 0, bit: 7, width: 1, kind: 'bool', conf: 'verified' },
+  { key: 'src', label: 'Physical axis', byte: 0, bit: 0, width: 4, kind: 'uint', offset: 1, min: 1, max: 16, conf: 'verified',
     hint: 'Which sensor feeds this axis' },
-  { key: 'usage', label: 'Appears as', byte: 1, bit: 0, width: 4, kind: 'enum', options: HID_USAGES, conf: 'static' },
-  { key: 'prec', label: 'Precision (bits)', byte: 2, bit: 0, width: 4, kind: 'uint', min: 8, max: 15, conf: 'static' },
-  { key: 'dzlo', label: 'Deadzone, centre / low (%)', byte: 3, bit: 0, width: 8, kind: 'tenths', conf: 'static' },
-  { key: 'dzhi', label: 'Deadzone, high (%)', byte: 4, bit: 0, width: 8, kind: 'tenths', conf: 'static' },
+  { key: 'usage', label: 'Appears as', byte: 1, bit: 0, width: 4, kind: 'enum', options: HID_USAGES, conf: 'verified' },
+  { key: 'prec', label: 'Precision (bits)', byte: 2, bit: 0, width: 4, kind: 'uint', min: 8, max: 15, conf: 'verified' },
+  { key: 'dzlo', label: 'Deadzone, centre / low (%)', byte: 3, bit: 0, width: 8, kind: 'tenths', conf: 'verified' },
+  { key: 'dzhi', label: 'Deadzone, high (%)', byte: 4, bit: 0, width: 8, kind: 'tenths', conf: 'verified' },
   { key: 'rel', label: 'Relative mode', byte: 6, bit: 7, width: 1, kind: 'bool', conf: 'static' },
 ];
 
 export const PHYSICAL_AXIS: FieldDef[] = [
-  { key: 'filter', label: 'Filter grade', byte: 1, bit: 5, width: 3, kind: 'uint', min: 0, max: 7, conf: 'verified',
-    hint: 'Smoothing. 0 = manual / off' },
+  { key: 'filter', label: 'Filter grade', byte: 1, bit: 5, width: 3, kind: 'uint', min: 0, max: 7, conf: 'static',
+    hint: 'Smoothing. 0 = manual / off. Writes and reads back, but its effect has not been observed' },
   { key: 'thr', label: 'Dynamic filter threshold', byte: 2, bit: 0, width: 8, kind: 'uint', min: 0, max: 255, conf: 'static' },
   { key: 'hf', label: 'H-filter', byte: 0, bit: 4, width: 3, kind: 'uint', min: 0, max: 7, conf: 'static' },
-  { key: 'inv', label: 'Sensor inverted', byte: 0, bit: 2, width: 1, kind: 'bool', conf: 'static' },
+  { key: 'inv', label: 'Sensor inverted', byte: 0, bit: 2, width: 1, kind: 'bool', conf: 'verified' },
   { key: 'acn', label: 'Auto-centre', byte: 0, bit: 0, width: 1, kind: 'bool', conf: 'static' },
   { key: 'acl', label: 'Auto-calibrate', byte: 0, bit: 1, width: 1, kind: 'bool', conf: 'static' },
   { key: 'eq', label: 'Response curve on', byte: 3, bit: 4, width: 1, kind: 'bool', conf: 'static' },

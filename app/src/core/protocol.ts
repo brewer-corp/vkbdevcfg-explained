@@ -33,6 +33,8 @@ export interface Transport {
   close(): Promise<void>;
   /** Milliseconds to wait between frames; 0 for an in-memory device. */
   readonly pace: number;
+  /** Live input reports (the data plane), if the transport can deliver them. Returns an unsubscribe. */
+  onInput?(listener: (reportId: number, data: Uint8Array) => void): () => void;
 }
 
 class StaleReply extends Error {}

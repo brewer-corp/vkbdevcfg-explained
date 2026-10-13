@@ -35,7 +35,8 @@ What has actually been confirmed on a device:
 |---|---|---|
 | CRC-32 of `block[8:]` | `0x004` | Verified on every read. The device recomputes it on every write, whatever the host sends. |
 | Firmware version | `0x008` | Matches the USB `bcdDevice`. |
-| Filter grade, physical axis 7 | `0x0B5` bits 5–7 | Changed from 6 to 5, written, read back before and after the stick restarted, restored. |
+| Ten axis fields: enable, visible, invert, centre, source sensor, HID usage, precision, both deadzones, sensor inversion | logical and physical axis records | Each changed in turn; the effect was observed in the stick's HID descriptor or idle input report ([`BLOCK-AXES.md`](BLOCK-AXES.md) §9a). |
+| Filter grade, physical axis 7 | `0x0B5` bits 5–7 | Written and read back. Its effect has not been observed. |
 
 And what real profiles show by difference:
 

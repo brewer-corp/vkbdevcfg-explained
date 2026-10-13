@@ -22,6 +22,13 @@ export class WebHidTransport implements Transport {
     return bytes.length > FRAME ? bytes.subarray(bytes.length - FRAME) : bytes;
   }
 
+  onInput(listener: (reportId: number, data: Uint8Array) => void): () => void {
+    const handler = (e: HIDInputReportEvent) =>
+      listener(e.reportId, new Uint8Array(e.data.buffer, e.data.byteOffset, e.data.byteLength));
+    this.device.addEventListener('inputreport', handler);
+    return () => this.device.removeEventListener('inputreport', handler);
+  }
+
   async close(): Promise<void> {
     if (this.device.opened) await this.device.close();
   }

@@ -8,8 +8,9 @@ import { Buttons } from './ui/Buttons';
 import { Leds } from './ui/Leds';
 import { BlockMap } from './ui/BlockMap';
 import { Changes } from './ui/Changes';
+import { Live, useLive } from './ui/Live';
 
-const TABS = ['Overview', 'Axes', 'Buttons', 'LEDs', 'Block', 'Review & apply'] as const;
+const TABS = ['Overview', 'Axes', 'Buttons', 'LEDs', 'Live', 'Block', 'Review & apply'] as const;
 type Tab = (typeof TABS)[number];
 
 /** ?tab=axes opens on that tab (used by tests and for deep links). */
@@ -57,6 +58,7 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const live = useLive(session);
   const changes = useMemo(() => (session && block ? diffBlocks(session.original, block) : []), [session, block]);
   const changedBytes = changes.reduce((n, r) => n + r.end - r.start + 1, 0);
 
@@ -132,7 +134,8 @@ export function App() {
       <main className="page">
         {tab === 'Overview' && <Overview session={session} ed={editor} go={() => setTab('Review & apply')} changed={changedBytes} />}
         {tab === 'Axes' && <Axes ed={editor} />}
-        {tab === 'Buttons' && <Buttons ed={editor} />}
+        {tab === 'Buttons' && <Buttons ed={editor} live={live} />}
+        {tab === 'Live' && <Live ed={editor} live={live} />}
         {tab === 'LEDs' && <Leds ed={editor} />}
         {tab === 'Block' && <BlockMap ed={editor} />}
         {tab === 'Review & apply' && (

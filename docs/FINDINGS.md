@@ -318,9 +318,11 @@ between here and that UI is the field map, which is partial —
 ## 10. Open questions
 
 1. **How much of the block is mapped, and how much of the map is right.** The
-   layout comes from static analysis. Only one field has been exercised on
-   hardware. Everything else needs the obvious experiment: change it, read the
-   block, see what moved.
+   layout comes from static analysis. Ten axis fields have since been
+   confirmed by changing each on the stick and watching its HID descriptor and
+   idle report change as predicted ([`BLOCK-AXES.md`](BLOCK-AXES.md) §9a).
+   Buttons, LEDs and everything else still need the same treatment; most of
+   those need a hand on the stick, which the config tool's live view is for.
 2. **Does it hold for other devices and firmware?** One stick, one firmware
    version. The tool carries branches for older block sizes (`0x400`, `0x800`)
    and for a different "profile" layout used by other device families; none of

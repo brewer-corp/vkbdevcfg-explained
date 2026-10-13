@@ -49,7 +49,7 @@ block carrying the wrong model ID. So the checks are here.
 - A block for another model or firmware is refused.
 - After the stick restarts, the block is read back and compared.
 - Fields are editable only if marked `verified` in the schema — changed on a
-  real stick and read back. Everything else is locked unless **Experimental
+  real stick, with the predicted effect observed. Everything else is locked unless **Experimental
   fields** is switched on.
 
 Verified on one model and firmware: a Gladiator EVO at 2.20.C. See

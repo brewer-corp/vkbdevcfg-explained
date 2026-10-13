@@ -16,11 +16,10 @@ Two labels are used, as in [`PROTOCOL.md`](PROTOCOL.md):
 - ***verified*** — exercised on the test device.
 - ***static*** — read out of the binary, not exercised on hardware.
 
-**One row is *verified*: the filter grade** — bits 5–7 of byte 1 of a
-physical-axis record, offset `0x7D + 8n`. It was changed from 6 to 5 on physical
-axis slot 7 (offset `0xB5`: `C8` → `A8`), written to the stick, read back
-identically before and after the stick restarted, and then restored (see §3.2).
-**Every other row is *static*.**
+**Ten fields are *verified*** — their effect was observed on the test stick, one
+experiment each, recorded in §9a: the logical-axis fields En, Vs, In, Cn,
+AxisID, HID usage, Precision, Dz Lo and Dz Hi, and the physical-axis inversion
+bit R. **Every other row is *static*.**
 
 Confidence is **high**, **medium** or **low**:
 
@@ -532,6 +531,38 @@ units, and the only difference between the two saves inside the axis structures
 is the bit the layout assigns to R. Other fields rest on the code reading and on
 the plausibility of the decode; the logical-record differences above are
 consistency checks only.
+
+---
+
+## 9a. Confirmed on hardware ***verified***
+
+Each row below is one experiment on the test stick (Gladiator EVO R, firmware
+2.20.C): one field changed, the block written, and the stick's HID report
+descriptor and idle input report compared with the baseline. The subject was
+the throttle — logical slot 3, HID usage Z, fed by physical slot 3 — because it
+rests off-centre, so changes show without anyone touching the stick. The
+original configuration was restored afterwards.
+
+Baseline: descriptor axis 3 is usage `0x32` (Z) with logical maximum 2047; the
+idle report reads Z = 1194.
+
+| Field | Change | Observed | Reading |
+|---|---|---|---|
+| Logical byte 0 bit 6, **In** | 0 → 1 | Z = 853 | exactly 2047 − 1194: the axis is inverted |
+| Physical byte 0 bit 2, **R** | toggled | Z = 858 | inverted at the sensor, before calibration |
+| Logical byte 1 bits 0–3, **HID usage** | 2 → 6 | descriptor usage `0x32` → `0x36` | index 6 is Slider, as in §2.1 |
+| Logical byte 2 bits 0–3, **Precision** | 11 → 12 | logical maximum 2047 → 4095; Z = 2389 | bits of resolution |
+| Logical byte 0 bit 5, **Vs** | 1 → 0 | descriptor usage becomes undefined (`0:00`); value still reported | hidden from the PC, still computed |
+| Logical byte 0 bit 4, **En** | 1 → 0 | Z = 0 | axis off |
+| Logical byte 0 bits 0–3, **AxisID** | 4 → 1 | Z = 1024, the centre | now fed by sensor 1 (stick X, at rest) |
+| Logical byte 0 bit 7, **Cn** | 1 → 0 | Z = 340 | a different scaling: full travel instead of centre-out |
+| Logical byte 3, **Dz Lo** | 0 → 25.5 % | Z = 1024 | snapped to centre: 1194 is inside a ±25.5 % centre deadzone |
+| Logical byte 4, **Dz Hi** | 3.0 → 25.5 % | Z = 1246 | deflection from centre grew ×1.31; (1 − 0.03) / (1 − 0.255) = 1.30 |
+| Logical slot 6, **En** and **Vs** | 0 → 1 | descriptor axis 6 becomes usage `0x36`; value 2048 | a disabled axis appears, as Slider |
+| Logical byte 6 bit 7, **Mode** | 0 → 1 | Z = 1230 | *something* changed; this does not show it is "relative mode". Still ***static*** |
+
+The filter grade (§3.2) was written and read back earlier, but its *effect* has
+never been observed. By the standard used in this table it is not confirmed.
 
 ---
 

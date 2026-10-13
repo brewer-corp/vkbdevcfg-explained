@@ -139,3 +139,17 @@ table.lines { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-
 .g-header { background: #ffd9a8; } .g-options { background: #c9641a; } .g-axes { background: var(--accent); } .g-buttons { background: var(--accent-2); }
 .g-ext { background: #a584ff; } .g-leds { background: var(--ok); } .g-detents { background: var(--warn); }
 .g-unknown { background: #5a3a14; color: var(--fg) !important; } .g-unused { background: #1d1309; color: var(--fg-faint) !important; }
+
+/* live input */
+.panel h2 small { font-family: var(--sans); letter-spacing: 0; text-transform: none; font-size: 12.5px; }
+.bar { display: grid; grid-template-columns: 150px 1fr 60px; gap: 12px; align-items: center; padding: 4px 0; font-size: 13.5px; }
+.bar.off { opacity: .4; }
+.bar .track { height: 12px; background: #000; border: 1px solid var(--line-2); position: relative; }
+.bar .track i { display: block; height: 100%; background: var(--accent); }
+.bar .hat { font-size: 20px; color: var(--accent); }
+.btngrid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 3px; }
+.btngrid span { text-align: center; font: 12px var(--mono); padding: 5px 0; border: 1px solid var(--line); color: var(--fg-faint); }
+.btngrid span.mapped { border-color: var(--line-2); color: var(--fg-dim); }
+.btngrid span.on { background: var(--accent); border-color: var(--accent); color: #000; box-shadow: 0 0 10px rgba(255,113,0,.6); }
+.lines tr.pressed td { background: var(--accent); color: #000; }
+.lines tr.pressed td b, .lines tr.pressed .dim, .lines tr.pressed .num { color: #000; }
