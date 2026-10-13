@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VKBDevCfg Explained — how VKB sticks are really configured</title>
+<meta name="description" content="A reverse-engineering debrief: the USB protocol, the 4096-byte configuration block and the .cfg profile format behind VKB's joystick configuration tool, verified on a Gladiator EVO.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="topbar"><div class="wrap">
+  <a class="mark" href="index.html">VKBDevCfg <b>// Explained</b></a>
+  <nav>
+    <a class="here" href="index.html">Debrief</a>
+    <a href="guide.html">Pilot's guide</a>
+    <a href="https://github.com/spadaval/vkbdevcfg-explained/tree/master/docs">Technical docs</a>
+    <a href="https://github.com/spadaval/vkbdevcfg-explained">Source</a>
+  </nav>
+</div></div>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Debrief // reverse-engineering a joystick</p>
+    <h1>Your stick is <span class="thin">4096 bytes</span></h1>
+    <p class="lede">
+      VKB's configuration program is sixty-nine windows wrapped around one idea it never states.
+      We took it apart, worked out how it talks to the hardware, and then did the same thing
+      without it — reading a Gladiator EVO's configuration from Linux, changing a setting, and
+      putting it back.
+    </p>
+    <div class="credit">
+      Independent, unaffiliated interoperability research, for configuring hardware you own.
+      New to the program itself? Start with the <a href="guide.html">pilot's guide</a> — a
+      plain-language tour of what every tab does. This page is what is underneath.
+    </div>
+
+    <div class="readouts">
+      <div class="readout"><div class="v">4096</div><div class="k">bytes of configuration, total</div></div>
+      <div class="readout"><div class="v">0x59</div><div class="k">the one HID report that carries it</div></div>
+      <div class="readout"><div class="v">33</div><div class="k">frames to read or write it all</div></div>
+      <div class="readout"><div class="v">3 / 0</div><div class="k">RC4 layers / actual secrets</div></div>
+      <div class="readout"><div class="v">2.7 s</div><div class="k">stick restart after a write</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="layout">
+
+<aside class="sidebar">
+  <a class="brand" href="#top">Debrief</a>
+  <div class="sub">What we found, and how we know</div>
+
+  <div class="nav-group">
+    <div class="group-title">Briefing</div>
+    <a class="item" href="#summary">The short version</a>
+    <a class="item" href="#target">The target</a>
+  </div>
+  <div class="nav-group">
+    <div class="group-title">Systems</div>
+    <a class="item" href="#block">The block</a>
+    <a class="item" href="#link">The link</a>
+    <a class="item" href="#profile">The profile file</a>
+    <a class="item" href="#crypto">The “encryption”</a>
+  </div>
+  <div class="nav-group">
+    <div class="group-title">Flight test</div>
+    <a class="item" href="#flight">Writing to a real stick</a>
+    <a class="item" href="#wrong">Wrong turns</a>
+  </div>
+  <div class="nav-group">
+    <div class="group-title">Outfitting</div>
+    <a class="item" href="#tools">Tools</a>
+    <a class="item" href="#open">Open contracts</a>
+    <a class="item" href="#databank">Data bank</a>
+  </div>
+</aside>
+
+<main id="top">
+
+<!-- ==================================================================== -->
+<section id="summary">
+  <h2><span class="num">01</span>The short version</h2>
+
+  <p>
+    Two questions started this. <em>What does VKBDevCfg actually do?</em> And <em>could we put a
+    better interface on top of it?</em> The first is answered in the
+    <a href="guide.html">pilot's guide</a>. The second has an answer now too:
+    <strong>yes — and you do not need VKBDevCfg at all.</strong>
+  </p>
+
+  <div class="grid two">
+    <div class="tile">
+      <h4>One block</h4>
+      <p>A VKB stick's entire configuration — every axis, button, LED and curve — is a single
+        4096-byte block in its flash memory. <kbd>Get</kbd> reads it. <kbd>Set</kbd> writes all
+        of it back.</p>
+    </div>
+    <div class="tile">
+      <h4>One report</h4>
+      <p>It travels over one HID feature report, <code>0x59</code>, in both directions, in frames
+        with a simple eight-byte header. No driver, no vendor library.</p>
+    </div>
+    <div class="tile">
+      <h4>No secrets</h4>
+      <p>It is encrypted on the cable and on disk, with RC4. Every key is either built into the
+        program or handed out by the stick on request.</p>
+    </div>
+    <div class="tile">
+      <h4>Proven on hardware</h4>
+      <p>A Gladiator EVO R was read, written back unchanged, changed by one setting, and restored
+        to a state byte-identical to where it started.</p>
+    </div>
+  </div>
+
+  <p>
+    So a better configuration tool is not a wrapper around the vendor program. It is
+    <strong>an editor for 4096 bytes</strong>, plus about three hundred lines of transport that
+    already exist in this project's repository.
+  </p>
+
+  <div class="note info">
+    <span class="tag">How to read this page</span>
+    <p>
+      Two labels appear throughout. <span class="pill verified">Verified</span> means it was
+      observed on the wire, on a real stick. <span class="pill static">Static</span> means it was
+      read out of the vendor program's code and has not been exercised on hardware. The
+      difference matters, and most of the field-by-field detail is still the second kind.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="target">
+  <h2><span class="num">02</span>The target</h2>
+
+  <h3>The program</h3>
+  <p>
+    <code>VKBDevCfg-C.exe</code> v0.93.89 is a 23&nbsp;MB, 32-bit Windows program written in
+    <strong>C++Builder</strong> on top of the Delphi VCL. It has no command line, no scripting,
+    no plugin interface — nothing to automate.
+  </p>
+  <p>
+    What it does have is names. Every window class carries a table mapping its event handlers to
+    code addresses, and reading those tables straight out of the file recovers 1,277 of them.
+    That is the difference between staring at <code>FUN_0041133c</code> and reading:
+  </p>
+<pre><code><span class="hi">TMainForm::btnReadParamClick</span>    0x0041133C    <span class="c">// the Get button</span>
+<span class="hi">TMainForm::btnWriteParamClick</span>   0x00410814    <span class="c">// the Set button</span>
+<span class="hi">TMainForm::ReadCPUID</span>            0x00410E90    <span class="c">// the handshake</span>
+<span class="hi">TMainForm::btnSaveParamClick</span>    0x00413B20    <span class="c">// Save to .cfg</span></code></pre>
+  <p>
+    With names, the read, write, save and load paths can simply be followed. About 2,000
+    functions decompile cleanly. Eighteen do not — they are giant <code>switch</code> statements
+    that exhaust the decompiler — and those had to be read as raw assembly.
+  </p>
+
+  <h3>The stick</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Property</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Device</td><td>VKBsim Gladiator EVO R — <code>231d:0200</code></td></tr>
+      <tr><td>Firmware</td><td>2.20.C</td></tr>
+      <tr><td>Interfaces</td><td>Exactly one, class HID</td></tr>
+      <tr><td>Endpoints</td><td>Exactly one: interrupt IN, 64 bytes, 1 ms. <strong>No OUT endpoint.</strong></td></tr>
+      <tr><td>Processor</td><td>STM32 — the handshake returns its 96-bit unique ID</td></tr>
+    </tbody>
+  </table></div>
+  <p>
+    No OUT endpoint means everything the host sends has to be a HID <em>control transfer</em>.
+    That one fact shapes the whole protocol.
+  </p>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>Report</th><th>Type</th><th>Size</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>0x01</code></td><td>Input</td><td>63 B</td><td>Live state: six axes, a hat, 128 button bits</td></tr>
+      <tr><td><code>0x08</code></td><td>Input</td><td>63 B</td><td>Service packets, such as encoder positions</td></tr>
+      <tr><td><code>0x0B</code> <code>0x0C</code></td><td>Input</td><td>63 B</td><td>Auxiliary state</td></tr>
+      <tr><td><code>0x58</code></td><td>Output</td><td>63 B</td><td class="dim">Not used for configuration</td></tr>
+      <tr><td><code>0x59</code></td><td><strong>Feature</strong></td><td>128 B</td><td><strong>All configuration traffic, both directions</strong></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="block">
+  <h2><span class="num">03</span>The block</h2>
+
+  <p>
+    The manual describes the stick as a real-time signal processor: shift layers, relative axes,
+    response curves, macro timing and LED priorities all run <strong>in the firmware</strong>,
+    not on the PC. The firmware takes its instructions from one table. This is that table, to
+    scale — hover a segment.
+  </p>
+
+  <div class="memmap" role="img" aria-label="Map of the 4096-byte parameter block">
+    <i class="m-hdr" style="--n:10"  title="0x000 header: marker, device type, CRC-32, firmware version"></i>
+    <i class="m-glb" style="--n:50"  title="0x00A global options, mouse, POV hats"></i>
+    <i class="m-axs" style="--n:208" title="0x03C axes: 8 logical + 8 physical records, 8 response curves"></i>
+    <i class="m-btn" style="--n:512" title="0x10C button tables: 128 physical lines + 128 logical lines, 2 bytes each"></i>
+    <i class="m-axs" style="--n:16"  title="0x30C axis-to-buttons records"></i>
+    <i class="m-glb" style="--n:20"  title="0x31C virtual-button settings, system address"></i>
+    <i class="m-ext" style="--n:128" title="0x330 external devices (grips, modules): 8 records of 16 bytes"></i>
+    <i class="m-led" style="--n:320" title="0x3B0 LED channel masks and LED events (up to 52 x 6 bytes)"></i>
+    <i class="m-btn" style="--n:240" title="0x4F0 Boolean function records"></i>
+    <i class="m-glb" style="--n:58"  title="0x5E0 more global options; POV 2 and 3"></i>
+    <i class="m-axs" style="--n:160" title="0x61A axes 8-15, per-axis curve number"></i>
+    <i class="m-unk" style="--n:214" title="0x6BA referenced by button code; not decoded"></i>
+    <i class="m-axs" style="--n:64"  title="0x790 per-axis trimmer source"></i>
+    <i class="m-led" style="--n:48"  title="0x7D0 LED gauge records"></i>
+    <i class="m-btn" style="--n:768" title="0x800 button-table extension and the Advanced Mapping virtual layer"></i>
+    <i class="m-det" style="--n:690" title="0xB00 detents"></i>
+    <i class="m-zero" style="--n:590" title="0xDB2 unused: zero, no references found"></i>
+  </div>
+  <div class="legend">
+    <span style="--c:#ffd9a8">Header</span>
+    <span style="--c:#b85200">Global options</span>
+    <span style="--c:#ff7100">Axes</span>
+    <span style="--c:#2fb4ff">Buttons</span>
+    <span style="--c:#9a6cff">External devices</span>
+    <span style="--c:#5ed16a">LEDs</span>
+    <span style="--c:#ffc400">Detents</span>
+    <span style="--c:#3a2408">Not decoded</span>
+    <span style="--c:#120c05">Unused</span>
+  </div>
+
+  <h3>It reads like a structure, because it is one</h3>
+  <p>
+    Decrypted, a near-default block is mostly <code>00</code>, <code>FF</code> and
+    <code>80</code> — about 1.6 bits of information per byte. The patterns are visible by eye:
+  </p>
+<div class="hex"><span class="o">0000</span>  <span class="a">FF FF 11 FF</span>  <span class="g">cc cc cc cc</span>  <span class="y">0C 22</span> C4 59 FF 00 00 00   <span class="c">marker, type 0x11 · CRC-32 · firmware 2.20.C</span>
+<span class="o">003C</span>  <span class="a">B0</span> 00 0C 1E 0A 00 00 00  <span class="a">B1</span> 01 0C 1E 0A 00 00 00   <span class="c">logical axes 0, 1: enabled, X and Y, 12-bit</span>
+<span class="o">004C</span>  <span class="a">B2</span> 05 0B 64 0A 00 00 00  <span class="a">B3</span> 02 0B 00 1E 00 00 00   <span class="c">axis 2 on Rot Z (the twist), axis 3 on Z</span>
+<span class="o">00BC</span>  80 80 80 80 80 80 80 80  80 80                     <span class="c">a response curve: ten points, 0x80 = straight line</span>
+<span class="o">012C</span>  <span class="a">3A 00  38 00  3B 00  39 00</span>                         <span class="c">lines 16-19: one hat, wired down / up / left / right</span>
+<span class="o">020C</span>  FF FF FF FF FF FF FF FF  FF FF FF FF <span class="g">96 FF  97 FF</span>   <span class="c">logical table: 0x80 + (joystick button - 1)</span>
+<span class="o">03B8</span>  <span class="g">C0 06 04</span> 01 00 00                                  <span class="c">LED event: LED 0, blue, constant</span></div>
+  <p class="cap">Excerpts from a real Gladiator EVO block. The CRC is shown as <code>cc</code>; per-unit calibration values are omitted.</p>
+
+  <h3>What is where</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Offset</th><th>Contents</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><code>0x000</code></td><td>Marker bytes, device type id, <strong>CRC-32 of everything after it</strong>, firmware version</td><td><span class="pill verified">Verified</span></td></tr>
+      <tr><td><code>0x00A</code></td><td>Global options: pulse times, button and POV counts, virtual controllers, FPS limits, port modes</td><td><span class="pill static">Static</span></td></tr>
+      <tr><td><code>0x03C</code></td><td><strong>Logical axes</strong> — 8 bytes each: bound physical axis, enable / visible / invert, HID usage, precision, deadzones, combine, relative mode</td><td><span class="pill static">Static</span></td></tr>
+      <tr><td><code>0x07C</code></td><td><strong>Physical axes</strong> — 8 bytes each: sensor type, filter grade, auto-centre, trimmer, and the per-unit calibration</td><td><span class="pill verified">One field verified</span></td></tr>
+      <tr><td><code>0x0BC</code></td><td>Response curves — ten points each</td><td><span class="pill static">Static</span></td></tr>
+      <tr><td><code>0x10C</code></td><td><strong>Physical button table</strong> — 128 lines × 2 bytes: a 5-bit function type (Button, Toggle, Tempo, SHIFT, POV, Encoder…) and its parameter</td><td><span class="pill static">Static</span></td></tr>
+      <tr><td><code>0x20C</code></td><td><strong>Logical button table</strong> — 128 lines × 2 bytes: joystick button, keystroke, hat, macro, mouse…</td><td><span class="pill static">Static</span></td></tr>
+      <tr><td><code>0x330</code></td><td>External devices — the grip and any modules: bus address, type, registers, LEDs</td><td><span class="pill static">Static</span></td></tr>
+      <tr><td><code>0x3B0</code></td><td>LED events — colour, blink mode and the condition that triggers it</td><td><span class="pill static">Static</span></td></tr>
+      <tr><td><code>0xB00</code></td><td>Detents</td><td><span class="pill static">Shallow</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <p>
+    About four fifths of the block is accounted for, at least by purpose. The field-level tables —
+    with the evidence and a confidence for every row — are in the
+    <a href="#databank">data bank</a>.
+  </p>
+
+  <div class="note gotcha">
+    <span class="tag">How far to trust the map</span>
+    <p>
+      The layout comes from reading the vendor program: it creates each settings control at run
+      time with a numeric ID, and giant <code>switch</code> functions copy between control and
+      block. Decoded with the resulting tables, real blocks read as a sensible stick — X and Y on
+      the contactless sensors, the twist on Rot Z, thirty buttons each used once, a system LED
+      that blinks on calibration. That is good evidence the map is broadly right.
+      It is not proof that any particular bit is.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="link">
+  <h2><span class="num">04</span>The link</h2>
+
+  <p>
+    Everything is a feature report <code>0x59</code>: one ID byte and 128 bytes of data. Sent with
+    <code>SET_REPORT</code>, fetched with <code>GET_REPORT</code>. On Windows that is
+    <code>HidD_SetFeature</code> / <code>HidD_GetFeature</code>; on Linux, two <code>hidraw</code>
+    ioctls. <span class="pill verified">Verified</span>
+  </p>
+
+  <h3>The frame</h3>
+  <div class="frame">
+    <div class="f" style="--w:1"><b>59</b><span>report id</span></div>
+    <div class="f hot" style="--w:1"><b>A5</b><span>prefix</span></div>
+    <div class="f hot" style="--w:1"><b>cmd</b><span>+ flags</span></div>
+    <div class="f" style="--w:2"><b>size</b><span>u16, total</span></div>
+    <div class="f" style="--w:2"><b>addr</b><span>u16</span></div>
+    <div class="f" style="--w:2"><b>crc-16</b><span>of payload</span></div>
+    <div class="f cold" style="--w:8"><b>payload…</b><span>120 bytes, then 128 per frame</span></div>
+  </div>
+  <p class="cap">
+    Host to device starts <code>A5</code>; the device answers <code>5A</code>. Command flag
+    <code>0xC0</code> means read, <code>0x80</code> means write. The CRC is CRC-16/MODBUS.
+  </p>
+
+  <h3>Step 1 — the handshake</h3>
+  <p>
+    The program first asks for something its own log messages call <code>READ_CPUID</code>:
+    command <code>0x0B</code>. Sixteen bytes of the reply, decrypted with a key that is
+    compiled into the program, are the <strong>session token</strong> — and its first twelve
+    bytes are the microcontroller's factory serial number. The first fifteen bytes of the token
+    are the key for everything that follows.
+  </p>
+
+  <h3>Step 2 — reading the configuration</h3>
+  <div class="seq">
+    <div class="row tx"><div class="who">Host</div><div class="what"><b>59 A5 CB</b> 78 00 00 00 … <em>READ_CPUID, 120 bytes</em></div></div>
+    <div class="row rx"><div class="who">Stick</div><div class="what"><b>59 5A CB</b> 78 00 00 00 crc … <em>token is inside</em></div></div>
+    <div class="row tx"><div class="who">Host</div><div class="what"><b>59 A5 C2</b> 00 10 00 00 … <em>read command 2, 0x1000 bytes, address 0</em></div></div>
+    <div class="row rx"><div class="who">Stick</div><div class="what"><b>59 5A C2</b> 00 10 00 00 crc + 120 bytes</div></div>
+    <div class="row rx"><div class="who">Stick</div><div class="what"><b>59</b> + 128 bytes <em>× 32 more</em></div></div>
+    <div class="row ev"><div class="who">Host</div><div class="what">RC4-decrypt with the token. Check the CRC-32 stored at offset 4. If it matches, everything above is right.</div></div>
+  </div>
+  <p>
+    That CRC-32 is the proof. It is the STM32's built-in hardware CRC, computed by the stick over
+    its own flash; when a decrypted block satisfies it, the framing, the handshake and the cipher
+    have all been understood correctly. It matched on the first full read.
+  </p>
+
+  <h3>Step 3 — writing it back</h3>
+  <div class="seq">
+    <div class="row tx"><div class="who">Host</div><div class="what"><b>59 A5 A4</b> 00 10 00 00 crc + 120 bytes <em>write command 0x24</em></div></div>
+    <div class="row tx"><div class="who">Host</div><div class="what"><b>59</b> + 128 bytes <em>× 32 more</em></div></div>
+    <div class="row ev"><div class="who">Host</div><div class="what">Wait 60 ms.</div></div>
+    <div class="row rx"><div class="who">Stick</div><div class="what"><b>59 5A A5 88 00</b> <em>status: block written</em></div></div>
+    <div class="row ev"><div class="who">Stick</div><div class="what">Drops off the bus 0.3 s later, and is back, running the new configuration, about 2.4 s after that.</div></div>
+  </div>
+  <p>
+    That restart is why VKBDevCfg seems to lose the stick for a moment after every
+    <kbd>Set</kbd>. It is the device applying its configuration, not a fault.
+  </p>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>Status word</th><th>Meaning</th><th>Seen</th></tr></thead>
+    <tbody>
+      <tr><td><code>5A A5 88 00</code></td><td>Block written</td><td class="ok">yes</td></tr>
+      <tr><td><code>22 22 22 22</code></td><td>CRC error</td><td class="ok">yes</td></tr>
+      <tr><td><code>11 5A A5 11</code></td><td>“No new data”</td><td class="dim">no</td></tr>
+      <tr><td><code>33 5A A5 33</code></td><td>Non-compatible profile</td><td class="dim">no</td></tr>
+      <tr><td><code>31 AD DE 31</code></td><td>Flash erase error</td><td class="dim">no</td></tr>
+      <tr><td><code>33 AD DE 33</code></td><td>Flash write error</td><td class="dim">no</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Things the stick does that nobody documented</h3>
+  <ul>
+    <li><strong>It recomputes the CRC itself.</strong> Send a block with the wrong checksum word
+      and it stores the right one. A host never has to compute it.</li>
+    <li><strong>The request after the handshake gets someone else's answer.</strong> Every time.
+      Ask again and it works. The vendor program never notices, because it never checks.</li>
+    <li><strong>The handshake reply leaks.</strong> The bytes around the token are whatever was last
+      in the stick's transfer buffer — including, after a read, part of your configuration in
+      plain text.</li>
+    <li><strong>There is a hidden “RAM” target.</strong> The program has a concealed selector for
+      it. The stick acknowledges writes to it, restarts, and changes nothing.</li>
+  </ul>
+</section>
+
+<!-- ==================================================================== -->
+<section id="profile">
+  <h2><span class="num">05</span>The profile file</h2>
+
+  <p>
+    A <code>.cfg</code> is what <kbd>Save</kbd> writes. For a long time it looked like the hard
+    part: 4096 bytes of noise, 7.95 bits of entropy per byte, and two profiles from nearly
+    identical configurations that shared almost nothing.
+  </p>
+  <p>It is the same block, with its CRC word removed, under RC4:</p>
+
+<pre><code>plain    = block[0:4] + block[8:4096]          <span class="c">// the block, minus its CRC word</span>
+file CRC = ~CRC32(plain)                       <span class="c">// stored in the clear, first four bytes</span>
+key      = <span class="hi">K[0:7]</span> + <span class="b">file CRC</span> + <span class="hi">K[11:13]</span>         <span class="c">// K is a constant in the program</span>
+file     = <span class="b">file CRC</span> + RC4(plain, key)</code></pre>
+
+  <p>
+    The twist is the checksum in the key. Change one setting and the checksum changes, and with it
+    <em>every encrypted byte in the file</em>. That is why two profiles looked unrelated — and why
+    an early analysis wrongly concluded the files were randomised on every save.
+  </p>
+  <p>
+    Decrypted, those two sample profiles differ in exactly <span class="bignum">2</span> bytes.
+  </p>
+
+  <div class="grid">
+    <div class="tile"><h4>Not locked to a stick</h4><p>Nothing in the file depends on the device it came from. Only a one-byte model ID inside the block is compared before writing.</p></div>
+    <div class="tile"><h4>Can be diffed</h4><p>Save, change one setting, save again, compare. This is now the cheapest way to learn what any setting does.</p></div>
+    <div class="tile"><h4>Can be created</h4><p>Re-encrypting the decrypted samples reproduces both vendor files byte for byte. <span class="pill verified">Verified</span></p></div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="crypto">
+  <h2><span class="num">06</span>The “encryption”</h2>
+
+  <p>Not one cipher. Three uses of the same small hand-written RC4 routine, with three keys:</p>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>Layer</th><th>Key</th><th>Protects</th></tr></thead>
+    <tbody>
+      <tr><td>Handshake reply</td><td>13 bytes, constant, in the program</td><td>The stick's serial number, in transit</td></tr>
+      <tr><td>Block on the cable</td><td>The stick's own serial number — which it hands to anyone who asks</td><td>Your configuration, in transit</td></tr>
+      <tr><td><code>.cfg</code> on disk</td><td>9 bytes of a constant + the file's own checksum</td><td>Your configuration, at rest</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>
+    Every key is either compiled into a program anyone can download or volunteered by the device.
+    <strong>There is no secret anywhere in the system.</strong> It is not DRM — the owner holds the
+    stick and the tool — and it is not authentication: the stick accepted reads and writes from a
+    client that is not VKBDevCfg.
+  </p>
+  <p>
+    The likeliest purpose is the boring one: keeping the format out of casual hands, so that
+    nobody hex-edits a profile and files a support ticket. Keying the cable on the serial number
+    probably does one useful thing by design — a captured write should decrypt to noise on any
+    other stick, which makes it harder to push one unit's calibration into another by accident.
+  </p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="flight">
+  <h2><span class="num">07</span>Writing to a real stick</h2>
+
+  <p>
+    Reading cannot hurt a device. Writing replaces its whole configuration, calibration included.
+    So writes came last — after the read path had proved the framing, the cipher and both
+    checksums, and after a backup — and the first one sent the stick nothing but its own bytes.
+  </p>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Target</th><th>What was sent</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>RAM</td><td>The stick's own block, unchanged</td><td>Accepted; nothing changed</td></tr>
+      <tr><td>2</td><td>Flash</td><td>The stick's own block, unchanged</td><td class="ok">Accepted; stored block identical</td></tr>
+      <tr><td>3</td><td>RAM</td><td>One setting changed</td><td>Accepted; <strong>nothing changed</strong></td></tr>
+      <tr><td>4</td><td>Flash</td><td>One setting changed</td><td class="ok">Accepted; stored, and still there after the restart</td></tr>
+      <tr><td>5</td><td>Flash</td><td>The original</td><td class="ok">Restored</td></tr>
+      <tr><td>6</td><td>Flash</td><td>The original, with a deliberately “wrong” CRC word</td><td class="ok">Accepted; the stick stored its own CRC</td></tr>
+      <tr><td>7–8</td><td>Flash</td><td>The change and the restore again, through the published tool</td><td class="ok">As 4 and 5</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>
+    The setting was the <strong>filter grade</strong> of physical axis slot 7 — three bits at
+    offset <code>0x0B5</code>, on a slot this stick does not use. After the last step the
+    configuration hashed identically to the backup taken before the first, and the stick
+    enumerated and reported input normally.
+  </p>
+
+  <div class="note tip">
+    <span class="tag">Never sent</span>
+    <p>
+      No firmware was flashed, and none of the program's <em>short commands</em> was sent —
+      nothing that resets a stick to factory defaults, starts a calibration or enters the
+      bootloader. They are catalogued from the code, with a danger rating, and left alone.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="wrong">
+  <h2><span class="num">08</span>Wrong turns</h2>
+
+  <p>
+    Five conclusions reached along the way were overturned by evidence. They are recorded rather
+    than quietly fixed, because the way they went wrong is the useful part.
+  </p>
+
+  <div class="retract">
+    <p class="was">“The program imports no cryptographic functions, so it cannot be encrypting anything.”</p>
+    <p class="is">A hand-written RC4 is about 190 bytes of code and leaves no trace in an import table.</p>
+  </div>
+  <div class="retract">
+    <p class="was">“Linux blocks feature reports for this device. This needs a Windows machine.”</p>
+    <p class="is">The request was malformed — the wrong ioctl number. The kernel rejected it before any device was involved, which looked exactly like a refusal.</p>
+  </div>
+  <div class="retract">
+    <p class="was">“The profile key is derived at run time from device state, so a profile may be locked to its stick.”</p>
+    <p class="is">Right routine, wrong caller. That was the key for the cable. The file key was sitting in the program the whole time.</p>
+  </div>
+  <div class="retract">
+    <p class="was">“Profiles are randomised on every save, so two of them can never be compared.”</p>
+    <p class="is">The checksum is part of the key. From outside, that is indistinguishable from a random nonce.</p>
+  </div>
+  <div class="retract">
+    <p class="was">“Set sends output report 0x58; Get fetches feature report 0x59.”</p>
+    <p class="is">A tidy guess from the descriptor. Both use <code>0x59</code>.</p>
+  </div>
+
+  <p>
+    Three of the five have the same shape: <strong>not finding the obvious evidence was taken as
+    evidence that there was none.</strong>
+  </p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="tools">
+  <h2><span class="num">09</span>Tools</h2>
+
+  <p>Python 3, standard library only. Everything is in the repository's <code>tools/</code> directory.</p>
+
+<pre><code><span class="c"># read a stick — cannot change it</span>
+sudo python3 tools/vkb_hid.py info
+sudo python3 tools/vkb_hid.py read                  <span class="c"># -> vkb_feature_block.bin</span>
+
+<span class="c"># profiles, offline, on any OS</span>
+python3 tools/vkb_cfg.py decrypt profile.cfg block.bin
+python3 tools/vkb_cfg.py encrypt block.bin   backup.cfg
+python3 tools/vkb_cfg.py diff    before.cfg  after.cfg
+
+<span class="c"># write — a dry run unless you say otherwise</span>
+sudo python3 tools/vkb_hid.py write new.bin
+sudo python3 tools/vkb_hid.py write new.bin <span class="hi">--yes</span></code></pre>
+
+  <p>
+    <code>write</code> shows what would change and stops. With <code>--yes</code> it saves the
+    current block first, refuses anything meant for a different model or firmware, checks the
+    stick's status word, waits out the restart, reads the block back and compares.
+  </p>
+
+  <div class="note warn">
+    <span class="tag">Caution</span>
+    <p>
+      Verified on <strong>one stick at one firmware version</strong>. The vendor program's own
+      warning text says an incompatible profile “may cause device inoperability”. Start with
+      <code>info</code>, keep a backup, change one thing at a time, and never mix any of this with
+      firmware flashing.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="open">
+  <h2><span class="num">10</span>Open contracts</h2>
+
+  <div class="grid">
+    <div class="tile">
+      <h4>Confirm the field map</h4>
+      <p>One field has been exercised on hardware. The rest is a reading of the vendor's code.</p>
+      <p>Fix: save a profile, change one setting in VKBDevCfg, save again, diff. No risk to the stick.</p>
+    </div>
+    <div class="tile">
+      <h4>Find out what the stick rejects</h4>
+      <p>It checks that a transfer arrived intact. Whether it refuses a configuration that makes no sense is unknown.</p>
+    </div>
+    <div class="tile">
+      <h4>Other models, other firmware</h4>
+      <p>The program has branches for older block sizes and a different layout for another device family. None was tested.</p>
+    </div>
+    <div class="tile">
+      <h4>The rest of the command set</h4>
+      <p>Reset, defaults, calibration, bootloader, macros. Catalogued from the code; never sent.</p>
+    </div>
+    <div class="tile">
+      <h4>Buttons, in full</h4>
+      <p>The function types are decoded. The parameters of the rarer ones — Tempo, Generator, Boolean — and the Advanced Mapping layer are not.</p>
+    </div>
+    <div class="tile">
+      <h4>The editor itself</h4>
+      <p>The actual goal. Everything above is what it needs to be safe.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="databank">
+  <h2><span class="num">11</span>Data bank</h2>
+
+  <p>The full technical record, with addresses, evidence and confidence levels.</p>
+
+  <div class="grid">
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/FINDINGS.md"><h4>Findings</h4><p>Everything established, split into observed and inferred. Start here.</p></a>
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/PROTOCOL.md"><h4>Protocol</h4><p>Framing, handshake, read, write, status words, quirks.</p></a>
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/CFG-FILE-FORMAT.md"><h4>.cfg format</h4><p>The profile container and its cipher.</p></a>
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/PARAMETER-BLOCK.md"><h4>Parameter block</h4><p>Region map, and what is verified versus static.</p></a>
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/BLOCK-AXES.md"><h4>Block: axes</h4><p>Logical and physical axis records, curves, calibration.</p></a>
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/BLOCK-BUTTONS.md"><h4>Block: buttons</h4><p>Physical and logical tables, function types, shift.</p></a>
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/BLOCK-GLOBAL.md"><h4>Block: global</h4><p>Header, options, external devices, LED events.</p></a>
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/COMMANDS.md"><h4>Commands</h4><p>Every other command, with a danger rating.</p></a>
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/ENCRYPTION-ANALYSIS.md"><h4>Encryption</h4><p>What the three RC4 layers are for.</p></a>
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/blob/master/docs/PRIOR-ART.md"><h4>Prior art</h4><p>What was already public: LED control, mostly.</p></a>
+    <a class="tile" href="https://github.com/spadaval/vkbdevcfg-explained/tree/master/tools"><h4>Tools</h4><p>The device and profile tools, and the analysis scripts.</p></a>
+    <a class="tile" href="guide.html"><h4>Pilot's guide</h4><p>What every tab of VKBDevCfg does, in plain language.</p></a>
+  </div>
+</section>
+
+</main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>
+      Based on <code>VKBDevCfg-C v0.93.89</code> as distributed from VKB's official downloads
+      page, VKB's NJoy32 User Guide v2.19, and a VKBsim Gladiator EVO R whose configuration was
+      read, changed by one setting, and restored. This site and its repository contain no VKB
+      binaries, firmware or documentation, no dump of any device's configuration, and no device
+      serial number.
+    </p>
+    <p>
+      VKB and VKBsim are trademarks of their respective owners. The visual style is a homage to
+      the cockpit interface of <em>Elite Dangerous</em>, a trademark of Frontier Developments;
+      no game assets are used. This is an independent, unaffiliated project.
+    </p>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

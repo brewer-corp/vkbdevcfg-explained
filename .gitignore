@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+
+# Vendor binaries and firmware — analysed locally, never redistributed.
+# Obtain these yourself from:
+#   https://vkbsimcontrollers.com/pages/downloads
+dist/
+VKBDevCfg/
+ZBootloader/
+ZBootloader2.exe
+T-Link/
+Show_HID/
+*.exe
+*.vkb
+*.dll
+
+# Vendor copyrighted documentation.
+manual.txt
+Njoy32*.pdf
+
+# Profile dumps captured from hardware — verbatim device configuration,
+# owned by whoever ran the experiment. Add your own captures here too.
+cfg/
+*.cfg
+!data/forms/_index.*
+vkb_feature_*.bin
+clipboard-format-dump.txt
+
+# Key capture logs from tools/superseded/rc4key.ps1. What they hold is the
+# device's unique ID -- not a secret, but it identifies one physical stick.
+keylog.csv
+keylog.txt
+
+# Large analysis artifacts
+forms/*.dfm.txt
+ghidra/
+*.gpr
+*.rep/
+
+# Editors / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/

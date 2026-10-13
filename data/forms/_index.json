@@ -1,0 +1,623 @@
+[
+  {
+    "blob": 0,
+    "name": "MainForm",
+    "class": "TMainForm",
+    "bytes": 3629774,
+    "pad": 0,
+    "top_children": 74,
+    "file": "00_MainForm.txt"
+  },
+  {
+    "blob": 1,
+    "name": "Form27",
+    "class": "TForm27",
+    "bytes": 2623864,
+    "pad": 0,
+    "top_children": 23,
+    "file": "01_Form27.txt"
+  },
+  {
+    "blob": 2,
+    "name": "Form36",
+    "class": "TForm36",
+    "bytes": 1720960,
+    "pad": 0,
+    "top_children": 30,
+    "file": "02_Form36.txt"
+  },
+  {
+    "blob": 3,
+    "name": "Form7",
+    "class": "TForm7",
+    "bytes": 505480,
+    "pad": 0,
+    "top_children": 6,
+    "file": "03_Form7.txt"
+  },
+  {
+    "blob": 4,
+    "name": "Form34",
+    "class": "TForm34",
+    "bytes": 258330,
+    "pad": 0,
+    "top_children": 7,
+    "file": "04_Form34.txt"
+  },
+  {
+    "blob": 5,
+    "name": "Form33",
+    "class": "TForm33",
+    "bytes": 225166,
+    "pad": 0,
+    "top_children": 26,
+    "file": "05_Form33.txt"
+  },
+  {
+    "blob": 6,
+    "name": "Form11",
+    "class": "TForm11",
+    "bytes": 195165,
+    "pad": 0,
+    "top_children": 52,
+    "file": "06_Form11.txt"
+  },
+  {
+    "blob": 7,
+    "name": "Form10",
+    "class": "TForm10",
+    "bytes": 193644,
+    "pad": 0,
+    "top_children": 52,
+    "file": "07_Form10.txt"
+  },
+  {
+    "blob": 8,
+    "name": "Form13",
+    "class": "TForm13",
+    "bytes": 173797,
+    "pad": 0,
+    "top_children": 18,
+    "file": "08_Form13.txt"
+  },
+  {
+    "blob": 9,
+    "name": "frxPrintDialog",
+    "class": "TfrxPrintDialog",
+    "bytes": 109736,
+    "pad": 0,
+    "top_children": 9,
+    "file": "09_frxPrintDialog.txt"
+  },
+  {
+    "blob": 10,
+    "name": "Form29",
+    "class": "TForm29",
+    "bytes": 51763,
+    "pad": 0,
+    "top_children": 3,
+    "file": "10_Form29.txt"
+  },
+  {
+    "blob": 11,
+    "name": "Form28",
+    "class": "TForm28",
+    "bytes": 27450,
+    "pad": 0,
+    "top_children": 16,
+    "file": "11_Form28.txt"
+  },
+  {
+    "blob": 12,
+    "name": "Form37A",
+    "class": "TForm37A",
+    "bytes": 24193,
+    "pad": 0,
+    "top_children": 17,
+    "file": "12_Form37A.txt"
+  },
+  {
+    "blob": 13,
+    "name": "Form12",
+    "class": "TForm12",
+    "bytes": 20304,
+    "pad": 0,
+    "top_children": 43,
+    "file": "13_Form12.txt"
+  },
+  {
+    "blob": 14,
+    "name": "Form6",
+    "class": "TForm6",
+    "bytes": 19870,
+    "pad": 0,
+    "top_children": 10,
+    "file": "14_Form6.txt"
+  },
+  {
+    "blob": 15,
+    "name": "frxInheritErrorForm",
+    "class": "TfrxInheritErrorForm",
+    "bytes": 18082,
+    "pad": 0,
+    "top_children": 7,
+    "file": "15_frxInheritErrorForm.txt"
+  },
+  {
+    "blob": 16,
+    "name": "Form46",
+    "class": "TForm46",
+    "bytes": 16685,
+    "pad": 0,
+    "top_children": 2,
+    "file": "16_Form46.txt"
+  },
+  {
+    "blob": 17,
+    "name": "Form5",
+    "class": "TForm5",
+    "bytes": 12340,
+    "pad": 0,
+    "top_children": 11,
+    "file": "17_Form5.txt"
+  },
+  {
+    "blob": 18,
+    "name": "Form47",
+    "class": "TForm47",
+    "bytes": 8385,
+    "pad": 0,
+    "top_children": 6,
+    "file": "18_Form47.txt"
+  },
+  {
+    "blob": 19,
+    "name": "frxPasswordForm",
+    "class": "TfrxPasswordForm",
+    "bytes": 7174,
+    "pad": 0,
+    "top_children": 5,
+    "file": "19_frxPasswordForm.txt"
+  },
+  {
+    "blob": 20,
+    "name": "sCalcForm",
+    "class": "TsCalcForm",
+    "bytes": 6532,
+    "pad": 0,
+    "top_children": 2,
+    "file": "20_sCalcForm.txt"
+  },
+  {
+    "blob": 21,
+    "name": "Form16",
+    "class": "TForm16",
+    "bytes": 6158,
+    "pad": 0,
+    "top_children": 11,
+    "file": "21_Form16.txt"
+  },
+  {
+    "blob": 22,
+    "name": "Form9",
+    "class": "TForm9",
+    "bytes": 5738,
+    "pad": 0,
+    "top_children": 5,
+    "file": "22_Form9.txt"
+  },
+  {
+    "blob": 23,
+    "name": "sColorDialogForm",
+    "class": "TsColorDialogForm",
+    "bytes": 5556,
+    "pad": 0,
+    "top_children": 26,
+    "file": "23_sColorDialogForm.txt"
+  },
+  {
+    "blob": 24,
+    "name": "Form17",
+    "class": "TForm17",
+    "bytes": 5111,
+    "pad": 0,
+    "top_children": 4,
+    "file": "24_Form17.txt"
+  },
+  {
+    "blob": 25,
+    "name": "frxPDFExportDialog",
+    "class": "TfrxPDFExportDialog",
+    "bytes": 4924,
+    "pad": 0,
+    "top_children": 4,
+    "file": "25_frxPDFExportDialog.txt"
+  },
+  {
+    "blob": 26,
+    "name": "frxRichEditorForm",
+    "class": "TfrxRichEditorForm",
+    "bytes": 4641,
+    "pad": 0,
+    "top_children": 5,
+    "file": "26_frxRichEditorForm.txt"
+  },
+  {
+    "blob": 27,
+    "name": "frxPageSettingsForm",
+    "class": "TfrxPageSettingsForm",
+    "bytes": 4450,
+    "pad": 0,
+    "top_children": 6,
+    "file": "27_frxPageSettingsForm.txt"
+  },
+  {
+    "blob": 28,
+    "name": "Form18",
+    "class": "TForm18",
+    "bytes": 4224,
+    "pad": 0,
+    "top_children": 5,
+    "file": "28_Form18.txt"
+  },
+  {
+    "blob": 29,
+    "name": "Form31",
+    "class": "TForm31",
+    "bytes": 3763,
+    "pad": 0,
+    "top_children": 4,
+    "file": "29_Form31.txt"
+  },
+  {
+    "blob": 30,
+    "name": "frxPreviewForm",
+    "class": "TfrxPreviewForm",
+    "bytes": 3652,
+    "pad": 0,
+    "top_children": 5,
+    "file": "30_frxPreviewForm.txt"
+  },
+  {
+    "blob": 31,
+    "name": "Form4",
+    "class": "TForm4",
+    "bytes": 3632,
+    "pad": 0,
+    "top_children": 2,
+    "file": "31_Form4.txt"
+  },
+  {
+    "blob": 32,
+    "name": "Form20",
+    "class": "TForm20",
+    "bytes": 3350,
+    "pad": 0,
+    "top_children": 4,
+    "file": "32_Form20.txt"
+  },
+  {
+    "blob": 33,
+    "name": "Form25",
+    "class": "TForm25",
+    "bytes": 2832,
+    "pad": 0,
+    "top_children": 21,
+    "file": "33_Form25.txt"
+  },
+  {
+    "blob": 34,
+    "name": "frxSysMemoEditorForm",
+    "class": "TfrxSysMemoEditorForm",
+    "bytes": 2793,
+    "pad": 0,
+    "top_children": 8,
+    "file": "34_frxSysMemoEditorForm.txt"
+  },
+  {
+    "blob": 35,
+    "name": "Form15",
+    "class": "TForm15",
+    "bytes": 2616,
+    "pad": 0,
+    "top_children": 9,
+    "file": "35_Form15.txt"
+  },
+  {
+    "blob": 36,
+    "name": "InfoForm",
+    "class": "TInfoForm",
+    "bytes": 2595,
+    "pad": 0,
+    "top_children": 24,
+    "file": "36_InfoForm.txt"
+  },
+  {
+    "blob": 37,
+    "name": "Form26",
+    "class": "TForm26",
+    "bytes": 2486,
+    "pad": 0,
+    "top_children": 4,
+    "file": "37_Form26.txt"
+  },
+  {
+    "blob": 38,
+    "name": "frxHTMLExportDialog",
+    "class": "TfrxHTMLExportDialog",
+    "bytes": 2482,
+    "pad": 0,
+    "top_children": 6,
+    "file": "38_frxHTMLExportDialog.txt"
+  },
+  {
+    "blob": 39,
+    "name": "frxIMGExportDialog",
+    "class": "TfrxIMGExportDialog",
+    "bytes": 2081,
+    "pad": 0,
+    "top_children": 5,
+    "file": "39_frxIMGExportDialog.txt"
+  },
+  {
+    "blob": 40,
+    "name": "Form45",
+    "class": "TForm45",
+    "bytes": 1981,
+    "pad": 0,
+    "top_children": 10,
+    "file": "40_Form45.txt"
+  },
+  {
+    "blob": 41,
+    "name": "frxHighlightEditorForm",
+    "class": "TfrxHighlightEditorForm",
+    "bytes": 1978,
+    "pad": 0,
+    "top_children": 6,
+    "file": "41_frxHighlightEditorForm.txt"
+  },
+  {
+    "blob": 42,
+    "name": "Form38",
+    "class": "TForm38",
+    "bytes": 1950,
+    "pad": 0,
+    "top_children": 8,
+    "file": "42_Form38.txt"
+  },
+  {
+    "blob": 43,
+    "name": "Form39",
+    "class": "TForm39",
+    "bytes": 1909,
+    "pad": 0,
+    "top_children": 7,
+    "file": "43_Form39.txt"
+  },
+  {
+    "blob": 44,
+    "name": "Form37",
+    "class": "TForm37",
+    "bytes": 1844,
+    "pad": 0,
+    "top_children": 7,
+    "file": "44_Form37.txt"
+  },
+  {
+    "blob": 45,
+    "name": "Form42",
+    "class": "TForm42",
+    "bytes": 1774,
+    "pad": 0,
+    "top_children": 7,
+    "file": "45_Form42.txt"
+  },
+  {
+    "blob": 46,
+    "name": "Form40",
+    "class": "TForm40",
+    "bytes": 1649,
+    "pad": 0,
+    "top_children": 9,
+    "file": "46_Form40.txt"
+  },
+  {
+    "blob": 47,
+    "name": "frxSearchDialog",
+    "class": "TfrxSearchDialog",
+    "bytes": 1531,
+    "pad": 0,
+    "top_children": 3,
+    "file": "47_frxSearchDialog.txt"
+  },
+  {
+    "blob": 48,
+    "name": "Form48",
+    "class": "TForm48",
+    "bytes": 1477,
+    "pad": 0,
+    "top_children": 6,
+    "file": "48_Form48.txt"
+  },
+  {
+    "blob": 49,
+    "name": "Form19",
+    "class": "TForm19",
+    "bytes": 1419,
+    "pad": 0,
+    "top_children": 7,
+    "file": "49_Form19.txt"
+  },
+  {
+    "blob": 50,
+    "name": "Form41",
+    "class": "TForm41",
+    "bytes": 1418,
+    "pad": 0,
+    "top_children": 7,
+    "file": "50_Form41.txt"
+  },
+  {
+    "blob": 51,
+    "name": "frxMemoEditorForm",
+    "class": "TfrxMemoEditorForm",
+    "bytes": 1408,
+    "pad": 0,
+    "top_children": 3,
+    "file": "51_frxMemoEditorForm.txt"
+  },
+  {
+    "blob": 52,
+    "name": "PathDialogForm",
+    "class": "TPathDialogForm",
+    "bytes": 1394,
+    "pad": 0,
+    "top_children": 8,
+    "file": "52_PathDialogForm.txt"
+  },
+  {
+    "blob": 53,
+    "name": "frxFormatEditorForm",
+    "class": "TfrxFormatEditorForm",
+    "bytes": 1367,
+    "pad": 0,
+    "top_children": 5,
+    "file": "53_frxFormatEditorForm.txt"
+  },
+  {
+    "blob": 54,
+    "name": "Form44",
+    "class": "TForm44",
+    "bytes": 1306,
+    "pad": 0,
+    "top_children": 7,
+    "file": "54_Form44.txt"
+  },
+  {
+    "blob": 55,
+    "name": "acMagnForm",
+    "class": "TacMagnForm",
+    "bytes": 1127,
+    "pad": 0,
+    "top_children": 2,
+    "file": "55_acMagnForm.txt"
+  },
+  {
+    "blob": 56,
+    "name": "Form43",
+    "class": "TForm43",
+    "bytes": 1024,
+    "pad": 0,
+    "top_children": 4,
+    "file": "56_Form43.txt"
+  },
+  {
+    "blob": 57,
+    "name": "frxProgress",
+    "class": "TfrxProgress",
+    "bytes": 965,
+    "pad": 0,
+    "top_children": 1,
+    "file": "57_frxProgress.txt"
+  },
+  {
+    "blob": 58,
+    "name": "FrameHint1",
+    "class": "TFrameHint1",
+    "bytes": 864,
+    "pad": 0,
+    "top_children": 3,
+    "file": "58_FrameHint1.txt"
+  },
+  {
+    "blob": 59,
+    "name": "Form30",
+    "class": "TForm30",
+    "bytes": 736,
+    "pad": 0,
+    "top_children": 3,
+    "file": "59_Form30.txt"
+  },
+  {
+    "blob": 60,
+    "name": "Form35",
+    "class": "TForm35",
+    "bytes": 608,
+    "pad": 0,
+    "top_children": 2,
+    "file": "60_Form35.txt"
+  },
+  {
+    "blob": 61,
+    "name": "Form8",
+    "class": "TForm8",
+    "bytes": 466,
+    "pad": 0,
+    "top_children": 2,
+    "file": "61_Form8.txt"
+  },
+  {
+    "blob": 62,
+    "name": "sPopupCalendar",
+    "class": "TsPopupCalendar",
+    "bytes": 448,
+    "pad": 0,
+    "top_children": 1,
+    "file": "62_sPopupCalendar.txt"
+  },
+  {
+    "blob": 63,
+    "name": "Form23",
+    "class": "TForm23",
+    "bytes": 367,
+    "pad": 0,
+    "top_children": 0,
+    "file": "63_Form23.txt"
+  },
+  {
+    "blob": 64,
+    "name": "FormX",
+    "class": "TFormX",
+    "bytes": 325,
+    "pad": 0,
+    "top_children": 0,
+    "file": "64_FormX.txt"
+  },
+  {
+    "blob": 65,
+    "name": "frxDialogForm",
+    "class": "TfrxDialogForm",
+    "bytes": 304,
+    "pad": 0,
+    "top_children": 0,
+    "file": "65_frxDialogForm.txt"
+  },
+  {
+    "blob": 66,
+    "name": "MagnifierOwner",
+    "class": "TMagnifierOwner",
+    "bytes": 298,
+    "pad": 0,
+    "top_children": 0,
+    "file": "66_MagnifierOwner.txt"
+  },
+  {
+    "blob": 67,
+    "name": "Form32",
+    "class": "TForm32",
+    "bytes": 253,
+    "pad": 0,
+    "top_children": 0,
+    "file": "67_Form32.txt"
+  },
+  {
+    "blob": 68,
+    "name": "Frame14",
+    "class": "TFrame14",
+    "bytes": 78,
+    "pad": 0,
+    "top_children": 0,
+    "file": "68_Frame14.txt"
+  }
+]

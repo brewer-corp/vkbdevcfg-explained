@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pilot's guide — VKBDevCfg Explained</title>
+<meta name="description" content="A plain-language guide to VKBDevCfg, VKB's inscrutable joystick configuration tool. Built from the DCS Tutorial walkthrough, plus static analysis of the application itself.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="topbar"><div class="wrap">
+  <a class="mark" href="index.html">VKBDevCfg <b>// Explained</b></a>
+  <nav>
+    <a href="index.html">Debrief</a>
+    <a class="here" href="guide.html">Pilot's guide</a>
+    <a href="https://github.com/spadaval/vkbdevcfg-explained/tree/master/docs">Technical docs</a>
+    <a href="https://github.com/spadaval/vkbdevcfg-explained">Source</a>
+  </nav>
+</div></div>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Pilot's guide // using the vendor tool</p>
+    <h1>VKBDevCfg <span class="thin">Explained</span></h1>
+    <p class="lede">
+      VKB makes excellent flight-sim hardware and then ships it with a configuration
+      program that was clearly written by the same person who names sticks
+      <em>Gladiator EVO</em>. This page is an attempt to make it legible.
+    </p>
+    <div class="credit">
+      Built from the walkthrough <strong>“VKBDevCfg Basics”</strong> by the
+      <strong>DCS Tutorial</strong> channel
+      (<a href="https://www.youtube.com/watch?v=KkrukbU1-rE" target="_blank" rel="noopener">YouTube</a>,
+      27 June 2022), credited and linked chapter by chapter <a href="#source">at the bottom</a>, and augmented by VKB's
+      official <strong>NJoy32 User Guide v2.19</strong>. Where this page goes beyond the video it
+      says so. For how the program talks to the stick, and how to do without it, see the
+      <a href="index.html">debrief</a>.
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="layout">
+
+<aside class="sidebar">
+  <a class="brand" href="#top">VKBDevCfg Explained</a>
+  <div class="sub">The mental model, the reference, the recipes</div>
+
+  <div class="nav-group">
+    <div class="group-title">Start here</div>
+    <a class="item" href="#what">What this program is</a>
+    <a class="item" href="#downloads">What to download</a>
+    <a class="item" href="#unlock">Unlocking the full UI</a>
+    <a class="item" href="#firmware">Firmware updates</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="group-title">Concepts</div>
+    <a class="item" href="#mental-model">The mental model</a>
+    <a class="item" href="#real-model">How it actually works</a>
+    <a class="item" href="#window">Anatomy of the window</a>
+    <a class="item" href="#getset">Get / Set / Save / Load</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="group-title">Reference</div>
+    <a class="item" href="#topbar">Top bar</a>
+    <a class="item" href="#test">Test tab</a>
+    <a class="item" href="#global">Global tab</a>
+    <a class="item" href="#profile">Profile tab</a>
+    <a class="item" href="#macro">Macro tab</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="group-title">Doing things</div>
+    <a class="item" href="#recipes">Recipes</a>
+    <a class="item" href="#gotchas">Gotchas</a>
+    <a class="item" href="#glossary">Glossary</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="group-title">Going deeper</div>
+    <a class="item" href="#beyond">What the video misses</a>
+    <a class="item" href="index.html">Under the hood →</a>
+    <a class="item" href="#source">The source video</a>
+  </div>
+</aside>
+
+<main id="top">
+
+<div class="searchwrap">
+  <input type="search" id="q" placeholder="Filter this page…  (e.g. axis, calibration, LED, macro, POV)" autocomplete="off">
+</div>
+
+<!-- ==================================================================== -->
+<section id="what">
+  <h2><a class="anchor" href="#what">#</a>What this program is</h2>
+
+  <p>
+    <strong>VKBDevCfg</strong> is the Windows program that configures VKB joysticks, throttles and
+    grips. It is the thing that decides which physical button becomes which button in your flight
+    sim, what colour an LED is, how an axis behaves, and what a thumb button does when you hold a
+    shift key.
+  </p>
+  <p>
+    It is also the tool that <strong>flashes firmware</strong> onto the stick, and the tool that
+    <strong>calibrates</strong> its axes.
+  </p>
+
+  <div class="grid">
+    <div class="tile">
+      <h4>It does three jobs</h4>
+      <p>Configure the stick · flash firmware · run self-tests and calibration.</p>
+    </div>
+    <div class="tile">
+      <h4>It has two halves</h4>
+      <p>A small toolbar across the top, and a large tabbed work area underneath.</p>
+    </div>
+    <div class="tile">
+      <h4>It only talks to one stick at a time</h4>
+      <p>You pick a device at the top, then everything below applies to that device.</p>
+    </div>
+  </div>
+
+  <div class="note info">
+    <span class="tag">Source</span>
+    <p>
+      This is a companion to the <strong>DCS Tutorial</strong> video. That video is the basis for
+      everything in <a href="#topbar">the reference sections</a>; this page reorganises it into
+      something you can skim, fixes the ordering, and adds the mental model that the video
+      describes but never names.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="downloads">
+  <h2><a class="anchor" href="#downloads">#</a>What to download</h2>
+
+  <p>
+    VKB's site is <a href="https://vkbsimcontrollers.com/pages/downloads" target="_blank" rel="noopener">vkbsimcontrollers.com/pages/downloads</a>.
+    You do not need all of it. The video picks out three things, and that guidance still holds:
+  </p>
+
+  <table>
+    <thead><tr><th>Get this</th><th>What it is</th><th>Do you need it?</th></tr></thead>
+    <tbody>
+      <tr><td><code>VKBDevCfg-C</code></td><td>The configuration program itself.</td><td>Yes — this is the tool.</td></tr>
+      <tr><td><code>ZBootloader2</code></td><td>Flashes firmware onto the microcontroller.</td><td>Yes, if you ever need to update or recover.</td></tr>
+      <tr><td><code>v2_20_C</code> (firmware pack)</td><td>The actual firmware images, one <code>.vkb</code> file per stick model.</td><td>Yes — ZBootloader flashes from these.</td></tr>
+      <tr><td><code>VKB_BtnTester</code> / <code>VKB_JoyTester</code></td><td>Minimal standalone test programs.</td><td>Optional, but handy for proving a stick works before you blame the config tool.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note tip">
+    <span class="tag">Tip</span>
+    <p>Extract the firmware pack into its own folder rather than dumping it with everything else.
+      It is ~66 files split by generation and model, and you will want to navigate straight to
+      <em>your</em> stick. Naming is consistent: <code>__BlackMamba_v2_20_C.vkb</code>,
+      <code>__KingCobra_v2_20_C.vkb</code>, and so on.</p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="unlock">
+  <h2><a class="anchor" href="#unlock">#</a>Unlocking the full UI</h2>
+
+  <p>
+    By default VKBDevCfg hides a substantial amount of its own interface. The video's first real
+    task is to turn the extra parts on. This is done by editing a text config file the program
+    creates itself.
+  </p>
+
+  <h3>The procedure</h3>
+  <ol>
+    <li>Open VKBDevCfg once, then close it. On first run it writes a file called <code>zconfig.ini</code>
+      into its own folder. If you never see that file appear, you did not actually launch it.</li>
+    <li>Open <code>zconfig.ini</code> in any plain text editor. <em>Not</em> Notepad-save-as-CSV, and
+      keep it as plain text.</li>
+    <li>Find the <code>[user]</code> section and add a line under it.</li>
+    <li>Find <code>partial_wr</code> and change its value to <code>1</code>.</li>
+    <li>Find <code>partial_calibration</code> and change its value to <code>1</code>.</li>
+    <li>Find the <code>[common]</code> section and add two lines under it.</li>
+    <li>Save, and restart VKBDevCfg.</li>
+  </ol>
+
+  <h3>The lines to add</h3>
+<pre><code>; under [user]
+User=Developer
+PartialWrite=1
+PartialCalibration=1
+
+; under [common]
+Use matrix=1
+Test Misc Enabled=1</code></pre>
+
+  <table>
+    <thead><tr><th>Key</th><th>Section</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>User=Developer</code></td><td>[User]</td><td>Unlocks <strong>Macros, LEDs and virtual mouse</strong>. These are hidden from normal users entirely.</td></tr>
+      <tr><td><code>PartialWrite=1</code></td><td>[User]</td><td>Adds <strong>Partial Write</strong> — pressing Set shows a dialog where you tick which parameter groups to send, instead of pushing everything.</td></tr>
+      <tr><td><code>PartialCalibration=1</code></td><td>[User]</td><td>Adds <strong>Partial Calibration</strong> — pick exactly which axes to calibrate.</td></tr>
+      <tr><td><code>Use matrix=1</code></td><td>[Common]</td><td>Adds the <strong>Row / Col / Base</strong> fields on <em>Global → External</em>.</td></tr>
+      <tr><td><code>Test Misc Enabled=1</code></td><td>[Common]</td><td>Enables the <strong>Miscellaneous</strong> test sub-tab — MARS sensors and the LED tester.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The full documented list</h3>
+  <p>These are all the settings VKB documents in Appendix I of the official manual:</p>
+
+  <table>
+    <thead><tr><th>Section</th><th>Parameter</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td>[Common]</td><td><code>Use matrix=1</code></td><td>Row / Col / Base fields on Global → External.</td></tr>
+      <tr><td>[Common]</td><td><code>PageControlTop=1/0</code></td><td>Put the tab strip at the top or the bottom of the window.</td></tr>
+      <tr><td>[Common]</td><td><code>SwapPL=1</code></td><td>Swap the axes panels so Physical is above Logical.</td></tr>
+      <tr><td>[Common]</td><td><code>Release_DI=1</code></td><td>Allows button and axis testing to remain live after parameters are activated. Set to <code>0</code> if testing misbehaves.</td></tr>
+      <tr><td>[Common]</td><td><code>Test Misc Enabled=1</code></td><td>Enables MARS sensor and LED testing.</td></tr>
+      <tr><td>[User]</td><td><code>User=Developer</code></td><td>Unlocks Macro, LEDs, virtual mouse.</td></tr>
+      <tr><td>[User]</td><td><code>ForcedWriteID=1</code></td><td>Lets you load a profile saved for a different firmware version.</td></tr>
+      <tr><td>[User]</td><td><code>PartialWrite=1</code></td><td>Partial Write dialog on Set.</td></tr>
+      <tr><td>[User]</td><td><code>PartialCalibration=1</code></td><td>Partial Calibration dialog.</td></tr>
+      <tr><td>[User]</td><td><code>Profile N= &lt;name&gt;</code></td><td>Named profiles. Repeat with N = 1, 2, 3… then enter the ID in the <em>Profile ID</em> field.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note info">
+    <span class="tag">Note on the video's spelling</span>
+    <p>
+      The walkthrough transcribes these as <code>partial_wr</code>, <code>partial_calibration</code>,
+      <code>test_misc_enabled</code> and <code>use_matrix</code>. VKB's own manual documents them as
+      <code>PartialWrite</code>, <code>PartialCalibration</code>, <code>Test Misc Enabled</code> and
+      <code>Use matrix</code> — note the spaces. I confirmed by disassembling the current build that
+      the lower-case underscore forms from the video do not appear in the executable. <strong>Use the
+      manual's spelling.</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="firmware">
+  <h2><a class="anchor" href="#firmware">#</a>Firmware updates</h2>
+
+  <p>
+    Firmware is the code running on the stick's microcontroller. Updating it is optional for a brand
+    new device and increasingly important for an older one — it is how you get bug fixes and new
+    features.
+  </p>
+
+  <h3>Via ZBootloader</h3>
+  <ol>
+    <li>Run <code>ZBootloader2</code>.</li>
+    <li>It lists every VKB device it can see. Double-click yours.</li>
+    <li>Point it at the <code>.vkb</code> file for <em>your exact model</em>, in the folder you
+      extracted the firmware pack into.</li>
+    <li>Confirm it shows the version you expect — the version number is printed next to the file.</li>
+    <li>Click <strong>Flash</strong>. It takes roughly 30 seconds, then closes itself.</li>
+  </ol>
+
+  <div class="note info">
+    <span class="tag">From inside VKBDevCfg</span>
+    <p>
+      You do not have to run ZBootloader separately. <strong>Tools → Bootloader</strong> in
+      VKBDevCfg launches it. The video notes this is mostly for recovery situations.
+    </p>
+  </div>
+
+  <p>
+    VKBDevCfg shows the firmware version currently on your stick next to the device name in the blue
+    bar at the top, so you can check whether an update is warranted before you flash anything.
+  </p>
+
+  <div class="note gotcha">
+    <span class="tag">Match the model, not the family</span>
+    <p>
+      The firmware pack contains separate images per model and per hardware generation
+      (<code>1stGen/</code>, …). Flashing the wrong image is the single most destructive thing you
+      can do with this toolchain. Check the filename against the model printed in VKBDevCfg's
+      device list.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="mental-model">
+  <h2><a class="anchor" href="#mental-model">#</a>The mental model</h2>
+
+  <p>
+    This is the part the video describes accurately but never summarises, and it is the reason the
+    tool feels confusing. There are <strong>three different kinds of “button” and “axis”</strong> in
+    play, and the program makes you configure each layer separately.
+  </p>
+
+  <div class="chain">
+    <div class="node">
+      <div class="lbl">Layer 1</div>
+      <h4>Physical</h4>
+      <p>The raw hardware. “The switch soldered to pin 10 on my grip.” Numbered from the
+        manufacturer. You see these in <em>Buttons → Physical Layer</em> and
+        <em>Axes → Physical Axis</em>.</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node">
+      <div class="lbl">Layer 2</div>
+      <h4>Logical</h4>
+      <p>The numbering Windows actually sees. “Button 37 in DirectInput.” Each physical input can be
+        mapped to any logical button you like — or to several at once.</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node">
+      <div class="lbl">Layer 3</div>
+      <h4>What it does</h4>
+      <p>What the game receives: a button press, a hat-switch direction, a keystroke, a macro, a
+        multimedia key, a system action.</p>
+    </div>
+  </div>
+
+  <h3>Why you have to care</h3>
+  <p>
+    The same indirection exists for axes. <strong>Physical axes</strong> are the raw sensor values
+    straight off the gimbal. <strong>Logical axes</strong> are what Windows reports — the two are
+    connected by a table you fill in.
+  </p>
+  <p>
+    In practice, on a default-configured VKB stick the physical axis <em>is</em> the logical axis,
+    one for one. The video says as much: if your X axis happens to be physical axis 1, you set
+    logical axis 1's source to physical axis 1. Leave it alone unless something is wrong.
+  </p>
+
+  <div class="note gotcha">
+    <span class="tag">The most common misunderstanding</span>
+    <p>
+      People look for “where do I set button 5” and find nothing, because button 5 might be a
+      <em>logical</em> button while the thing they pressed is <em>physical</em> button 12.
+      Always ask which layer you are in before changing a number.
+    </p>
+  </div>
+
+  <h3>The shifter example</h3>
+  <p>
+    The video walks through a shifter, and it is the clearest illustration of why virtual buttons
+    exist:
+  </p>
+  <ol>
+    <li>Your trigger is physical button 10. By default that drives logical button 10.</li>
+    <li>You want <em>trigger alone</em> → logical button 79, and <em>trigger + shift</em> → logical
+      button 80.</li>
+    <li>One physical input cannot produce two logical outputs at once — so the shift condition is
+      handled by changing what physical button 10 <em>is</em> while shift is held.</li>
+    <li>Logical button 79 gets a real physical source (your trigger). Logical button 80 has no
+      physical switch left to drive it, so it is assigned to a <strong>virtual button</strong> — a
+      button that does not physically exist and is only ever triggered by the firmware.</li>
+  </ol>
+  <p>
+    That is the whole trick: <strong>virtual buttons let one physical input fan out into several
+    logical buttons</strong> under different conditions.
+  </p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="real-model">
+  <h2><a class="anchor" href="#real-model">#</a>How it actually works</h2>
+
+  <p>
+    The mental model above is the video's. Here is what VKB's own manual reveals, which is more
+    precise and a little more alarming. Sourced from the official
+    <strong>NJoy32 Configuration Utility User Guide v2.19</strong> (August 2023, 163 pages) linked
+    from their downloads page.
+  </p>
+
+  <div class="note warn">
+    <span class="tag">The thing that changes everything</span>
+    <p>
+      <strong>The stick is a real-time signal processor, not a remapping table.</strong> Almost every
+      “logical” feature — shift hierarchies, relative axes, curve equalisation, macro timing, LED
+      priority — is executed <em>in firmware on the device</em>, not in the PC program. Your PC tool
+      does exactly two things: push a parameter block into the stick, and pull it back out.
+    </p>
+    <p>
+      This is why the tool can be a plain grid of cells with no performance concerns, and also why
+      you cannot reproduce its behaviour with a software remapper on the host. That work happens at
+      the USB polling rate, in hardware.
+    </p>
+  </div>
+
+  <h3>The real currency is “lines”</h3>
+  <p>
+    Not buttons. The manual is explicit that “button” is shorthand — a hat switch is four lines, a
+    two-position toggle is two lines, an encoder is two:
+  </p>
+  <blockquote>
+    “Every pair of button contacts is represented as single line. So simple button occupies one line,
+    toggle switch On–Off–On — two lines, 4-way HAT — 4. <strong>Njoy32 controller can process up to
+    128 lines.</strong>”
+  </blockquote>
+  <p>
+    Lines are numbered by wiring, and grouped <strong>eight to a register</strong> —
+    <code>Reg#1 … Reg#16</code>. That is why the physical grid is 128 cells and why nothing in the
+    tool makes sense unless you think in those numbers.
+  </p>
+
+  <h3>It is a four-layer pipeline, not a two-layer map</h3>
+  <div class="chain">
+    <div class="node">
+      <div class="lbl">Layer 1</div>
+      <h4>Physical line</h4>
+      <p>Wired contact or sensor. Numbers 1–128, fixed by hardware.</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node">
+      <div class="lbl">Layer 2</div>
+      <h4>Physical function</h4>
+      <p>What the line <em>is</em>: Button, ButAlt, Shift, SubShift, Toggle, Encoder, POV, Tempo,
+        Generator… 26 types.</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node">
+      <div class="lbl">Layer 3</div>
+      <h4>Logical line</h4>
+      <p>What Windows sees. Defaults to the same number if you do nothing.</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node">
+      <div class="lbl">Layer 4</div>
+      <h4>Logical function</h4>
+      <p>What the game receives: press, HAT, keystroke, mouse, macro, media, system. 11 types.</p>
+    </div>
+  </div>
+
+  <p>
+    The video collapses layers 2 and 3 into one step. Separating them is what makes the tool feel
+    arbitrary: <strong>some physical functions have no logical function at all</strong> — Shift is
+    one. It is a modifier, not an output.
+  </p>
+
+  <h3>Three more things the video never mentions</h3>
+  <ul>
+    <li><strong>En vs Vs</strong> — every line has two separate visibility gates. One says the line
+      exists, the other says it is currently live. They are not the same and conflating them is the
+      most common misconfiguration in the whole tool.</li>
+    <li><strong>Virtual controllers 1–8</strong> — a workaround for Windows' hard limit of 8 axes
+      per HID device. With more than 8 axes you must spread them across virtual controllers, and the
+      tool makes you do it manually.</li>
+    <li><strong>Only one live configuration exists on the device.</strong> There is no multi-slot
+      store; <kbd class="key">Get</kbd> retrieves the entire parameter set in one go, whatever tab
+      you happen to be on. Your per-game profiles live in <code>.cfg</code> files on the PC, not on
+      the stick.</li>
+  </ul>
+
+  <div class="note gotcha">
+    <span class="tag">Occupancy</span>
+    <p>
+      Logical line numbers must be unique. The manual is blunt: “This number must NOT be the same
+      with existing physical button line.” The tool gives you no visual warning when you collide two
+      assignments — one of the clearest opportunities for a better interface.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="window">
+  <h2><a class="anchor" href="#window">#</a>Anatomy of the window</h2>
+
+  <p>
+    Once you have picked your device, the window splits into two very different regions, and the
+    video is clear that people routinely conflate them.
+  </p>
+
+  <div class="grid">
+    <div class="tile">
+      <h4>Top — the toolbar</h4>
+      <p>Device selection, plus three tabs: <strong>Action</strong>,
+        <strong>Tools</strong>, <strong>Settings</strong>. This is what you use constantly.</p>
+    </div>
+    <div class="tile">
+      <h4>Bottom — the work area</h4>
+      <p>Five tabs: <strong>Test</strong>, <strong>Global</strong>, <strong>Profile</strong>,
+        <strong>Macro</strong>. This is where the actual configuration lives.</p>
+    </div>
+  </div>
+
+  <h3>Pick your device first</h3>
+  <p>
+    At the very top is a blue box listing every connected VKB device. Click yours. The app takes a
+    second or two to read it, and then shows its firmware version. <strong>Everything below is
+    scoped to the device you picked.</strong> If you have a stick and a throttle plugged in, you
+    must switch between them.
+  </p>
+</section>
+
+<!-- ==================================================================== -->
+<section id="getset">
+  <h2><a class="anchor" href="#getset">#</a>Get / Set / Save / Load</h2>
+
+  <p>
+    These four buttons cause more confusion than anything else in the program, so they are worth
+    stating plainly.
+  </p>
+
+  <table>
+    <thead><tr><th>Button</th><th>What it does</th><th>When you use it</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><kbd class="key">Set</kbd></td>
+        <td>Writes the settings currently shown in the software <strong>into the physical stick</strong>.</td>
+        <td>After every change you want to keep. Changes in the UI are otherwise just a draft.</td>
+      </tr>
+      <tr>
+        <td><kbd class="key">Get</kbd></td>
+        <td>Reads the settings <strong>out of the stick</strong> back into the software.</td>
+        <td>When what you see disagrees with what the stick is doing — e.g. after plugging in a stick configured on another machine.</td>
+      </tr>
+      <tr>
+        <td><kbd class="key">Save</kbd></td>
+        <td>Saves the current configuration to a file of your choosing.</td>
+        <td>To keep a separate setup per game.</td>
+      </tr>
+      <tr>
+        <td><kbd class="key">Load</kbd></td>
+        <td>Loads a previously saved configuration file into the software.</td>
+        <td>To switch between those per-game setups.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note gotcha">
+    <span class="tag">The single most common mistake</span>
+    <p>
+      <strong>Changing a setting in the UI does nothing to the stick until you press Set.</strong>
+      You will change an LED to purple, look down at your joystick, and see it still yellow — and
+      conclude the software is broken. It is not; you just have not written the change down.
+    </p>
+  </div>
+
+  <h3>Per-game profiles</h3>
+  <p>
+    The Save/Load pair exists to solve a real problem: DCS, Microsoft Flight Simulator and Elite
+    Dangerous all want different bindings. The workflow is:
+  </p>
+  <ol>
+    <li>Configure everything for DCS. <kbd class="key">Save</kbd> → name it <code>DCS.cfg</code>.</li>
+    <li>Reconfigure for Elite Dangerous. <kbd class="key">Save</kbd> → <code>Elite.cfg</code>.</li>
+    <li>Before playing, <kbd class="key">Load</kbd> the right file, then press
+      <kbd class="key">Set</kbd> to push it into the stick.</li>
+  </ol>
+
+  <div class="note tip">
+    <span class="tag">Tip</span>
+    <p>
+      Turn on <strong>Settings → Set After Load</strong> and the <kbd class="key">Set</kbd> becomes
+      automatic — loading a file immediately writes it to the stick. One less step, and one less
+      way to be confused.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="topbar">
+  <h2><a class="anchor" href="#topbar">#</a>Top bar reference</h2>
+
+  <p>Three tabs. The video is opinionated about which parts matter, and that opinion is sound.</p>
+
+  <div class="tabs" data-tabs="tb">
+    <button class="on" data-tab="act">Action</button>
+    <button data-tab="tools">Tools</button>
+    <button data-tab="set">Settings</button>
+  </div>
+
+  <div class="tabpanel" data-panel="act">
+    <h3>Action</h3>
+
+    <table>
+      <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>Device readout</td><td>Shows which microcontroller is inside your stick (e.g. “VKB NJoy 32”). Purely informational.</td></tr>
+        <tr><td><kbd class="key">Restart</kbd></td><td>Disconnects and reconnects the controller. This is the first thing to try when a stick is misbehaving or has gone unresponsive.</td></tr>
+        <tr><td><kbd class="key">Get</kbd></td><td>Pull settings out of the stick. See <a href="#getset">above</a>.</td></tr>
+        <tr><td><kbd class="key">Set</kbd></td><td>Push settings into the stick. See <a href="#getset">above</a>.</td></tr>
+        <tr><td><kbd class="key">Save</kbd> / <kbd class="key">Load</kbd></td><td>Per-game configuration files.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note tip">
+      <span class="tag">The daily drivers</span>
+      <p>Restart, Get, Set, Save, Load. Everything else on this tab you may never touch.</p>
+    </div>
+  </div>
+
+  <div class="tabpanel" data-panel="tools" hidden>
+    <h3>Tools</h3>
+    <p>The video's honest summary: “you're probably not going to use these that much.”</p>
+
+    <table>
+      <thead><tr><th>Control</th><th>What it does</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr><td><kbd class="key">Default</kbd></td><td>Resets everything back to factory defaults. The panic button when you have genuinely lost track of what you changed.</td><td><span class="pill on">HIGH</span></td></tr>
+        <tr><td>Start / End Calibr.</td><td>Runs axis calibration. You do this once on a new stick, and again if an axis ever feels wrong.</td><td><span class="pill on">HIGH</span></td></tr>
+        <tr><td>Cancel Calibr.</td><td>Abandons a calibration run partway through.</td><td><span class="pill">rare</span></td></tr>
+        <tr><td>Bootloader</td><td>Launches ZBootloader from inside VKBDevCfg.</td><td><span class="pill">rare</span></td></tr>
+        <tr><td>Make reg file</td><td>Generates a registry file — the pre-<code>zconfig.ini</code> way of enabling developer mode.</td><td><span class="pill">rare</span></td></tr>
+        <tr><td>Parking</td><td>Reserves a button as a parking brake. You will probably never use it.</td><td><span class="pill">rare</span></td></tr>
+        <tr><td>Device Report</td><td>Exports a PDF of all your settings. Useful when asking for help in a forum.</td><td><span class="pill off">rare</span></td></tr>
+        <tr><td>Button Wizard</td><td>Guided setup. See <a href="#beyond">what the video misses</a>.</td><td><span class="pill">check it out</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>How calibration actually works</h3>
+    <ol>
+      <li>Click <strong>Start Calibration</strong>.</li>
+      <li>A dialog appears listing the axes. Select the ones you want (with
+        <code>partial_calibration=1</code> in <code>zconfig.ini</code> you get to choose; without it,
+        it assumes you want all of them).</li>
+      <li>Click <strong>Set</strong>.</li>
+      <li>Move every selected axis to its <strong>extreme</strong> position — full forward, full back,
+        full left, full right, throttle to the stops.</li>
+      <li>Click <strong>End Calibration</strong>. Done.</li>
+    </ol>
+    <p>If you mess it up midway, <strong>Cancel Calibration</strong> gets you out without writing bad
+      values.</p>
+  </div>
+
+  <div class="tabpanel" data-panel="set" hidden>
+    <h3>Settings</h3>
+    <p>Four checkboxes and a skin picker. These change how the program behaves, not how your stick
+      behaves.</p>
+
+    <table>
+      <thead><tr><th>Option</th><th>On</th><th>Off</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Auto Read Parameters</strong></td>
+          <td>When you plug a stick in, it automatically reads and displays its settings.</td>
+          <td>You must press <kbd class="key">Get</kbd> manually every time you connect.</td>
+        </tr>
+        <tr>
+          <td><strong>Set After Load</strong></td>
+          <td>Loading a config file immediately writes it to the stick.</td>
+          <td>Loading only fills the UI; you still press <kbd class="key">Set</kbd>.</td>
+        </tr>
+        <tr>
+          <td><strong>Partial Write</strong></td>
+          <td>Pressing <kbd class="key">Set</kbd> asks which categories to send (LEDs, buttons, axes…).</td>
+          <td>Everything is sent every time. Simpler, and safer if you are not sure.</td>
+        </tr>
+        <tr>
+          <td><strong>Partial Calibration</strong></td>
+          <td>Calibration lets you pick which axes to calibrate.</td>
+          <td>Calibration always covers every axis.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Skin</strong> just changes how the program looks. The video's author prefers the dark
+      “Metro” skin over the default white one; purely cosmetic.</p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="test">
+  <h2><a class="anchor" href="#test">#</a>Test tab</h2>
+
+  <p>
+    For verifying hardware. It is read-mostly, so it is the safest place to poke around, and the
+    first place to look when something seems broken.
+  </p>
+
+  <div class="tabs" data-tabs="test">
+    <button class="on" data-tab="t-info">Info</button>
+    <button data-tab="t-btn">Buttons / POVs</button>
+    <button data-tab="t-axes">Axes</button>
+    <button data-tab="t-ext">External Devices</button>
+    <button data-tab="t-misc">Miscellaneous</button>
+  </div>
+
+  <div class="tabpanel" data-panel="t-info">
+    <h3>Info</h3>
+    <p>Plain device facts: model name, version, firmware version. Nothing to configure. The video's
+      verdict: “pretty straightforward”. Correct — use it to confirm you are editing the right device
+      and running the firmware you think you are.</p>
+  </div>
+
+  <div class="tabpanel" data-panel="t-btn" hidden>
+    <h3>Buttons / POVs</h3>
+    <p>
+      Press a button on the stick and watch which cell lights up. This is the tool that tells you
+      <em>which physical button number</em> a given switch is wired to.
+    </p>
+    <div class="note tip">
+      <span class="tag">This is the most useful screen in the program</span>
+      <p>
+        Before you remap anything, find out the physical number. Press the button, read the number,
+        then go and change <em>that</em> one.
+      </p>
+    </div>
+  </div>
+
+  <div class="tabpanel" data-panel="t-axes" hidden>
+    <h3>Axes</h3>
+    <p>Live axis readout — move the stick and watch the values move. Use it to confirm an axis is
+      alive and to see its resting centre before and after calibration.</p>
+  </div>
+
+  <div class="tabpanel" data-panel="t-ext" hidden>
+    <h3>External Devices</h3>
+    <p>Lists other VKB devices currently plugged in. Useful on multi-stick setups.</p>
+  </div>
+
+  <div class="tabpanel" data-panel="t-misc" hidden>
+    <h3>Miscellaneous — the LED tester</h3>
+    <p>Requires <code>test_misc_enabled=1</code> in <code>zconfig.ini</code>.</p>
+    <ol>
+      <li>Type an LED number into the box — e.g. <code>LED 0</code> or <code>LED 10</code>.</li>
+      <li>Hold the button next to it. That LED flashes on the physical stick.</li>
+      <li>Set a colour in the panel on the right and click <strong>OK</strong> to change what colour
+        the test uses.</li>
+    </ol>
+
+    <div class="note gotcha">
+      <span class="tag">LED numbering is per-device</span>
+      <p>
+        Different sticks have different LEDs. The video's example — a Gladiator NXT with
+        <code>LED 0</code>, <code>LED 10</code>, <code>LED 11</code> — does not transfer to another
+        model. Check your own device.
+      </p>
+    </div>
+    <div class="note gotcha">
+      <span class="tag">Restart afterwards</span>
+      <p>The manual instructs you to restart the joystick after testing LEDs. The video's author
+        cannot explain why — but the manual is explicit, so do it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="global">
+  <h2><a class="anchor" href="#global">#</a>Global tab</h2>
+
+  <p>
+    Settings that apply to the whole device rather than to one axis or button.
+  </p>
+
+  <div class="tabs" data-tabs="global">
+    <button class="on" data-tab="g-common">Common</button>
+    <button data-tab="g-ext">External</button>
+    <button data-tab="g-leds">LEDs</button>
+  </div>
+
+  <div class="tabpanel" data-panel="g-common">
+    <h3>Common</h3>
+    <ul>
+      <li><strong>Button count</strong> — how many buttons the device exposes to Windows.</li>
+      <li><strong>POV / hat count</strong> — how many hat switches. Setting this to zero makes the
+        hats disappear from Windows entirely.</li>
+      <li><strong>Timing</strong> — debounce and timing behaviour per button.</li>
+      <li><strong>Keyboard</strong> — enables a virtual keyboard, so a stick button can emit a
+        keystroke. Choose classic or modified.</li>
+      <li><strong>Mouse</strong> — the same idea for a virtual mouse.</li>
+    </ul>
+    <div class="note info">
+      <span class="tag">Advice from the source</span>
+      <p>“I'd recommend leaving most of these defaults.” Agreed — these are easy to break and hard to
+        diagnose.</p>
+    </div>
+  </div>
+
+  <div class="tabpanel" data-panel="g-ext" hidden>
+    <h3>External</h3>
+    <p>Low-level microcontroller configuration — SPI, serial, GPIO and the like.</p>
+    <div class="note warn">
+      <span class="tag">Leave this alone</span>
+      <p>
+        The video's author is blunt: “I'm going to be honest, I don't know that much about
+        microcontrollers… unless you really know what you're doing you probably shouldn't mess with
+        this tab.” Firmware-level settings that can stop a stick responding.
+      </p>
+    </div>
+  </div>
+
+  <div class="tabpanel" data-panel="g-leds" hidden>
+    <h3>LEDs</h3>
+    <p>Where you will spend real time if you care about lighting.</p>
+
+    <h4>How it works</h4>
+    <p>
+      LEDs are configured as a list of <strong>events</strong>. An event is <em>the thing that causes
+      the light to change</em>. For each event you choose which LED, which colour, and which mode.
+    </p>
+
+    <table>
+      <thead><tr><th>Event</th><th>Meaning</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Event 0</strong></td><td>The default / idle state. Lights are on unless something else overrides them.</td><td>LED 10 constant purple at rest.</td></tr>
+        <tr><td><strong>Logical Button</strong></td><td>Light changes when a particular logical button is pressed.</td><td>Press logical button 10 → LED 10 turns yellow.</td></tr>
+        <tr><td>Axis, Hat, etc.</td><td>Light reacts to an axis crossing a threshold, a hat direction, and so on.</td><td>LED 7 turns green when the throttle is past 80%.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note gotcha">
+      <span class="tag">You cannot make an LED a colour it is not</span>
+      <p>
+        Not every stick has RGB LEDs. If your stick's LED 0 is a single fixed-colour LED, selecting
+        green in the dropdown will simply have no effect. The video demonstrates this — the Gladiator
+        NXT has one RGB LED and the rest are single-colour.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="profile">
+  <h2><a class="anchor" href="#profile">#</a>Profile tab</h2>
+
+  <p>
+    <strong>This is where you will spend most of your time.</strong> Axes, buttons, POVs and logical
+    functions all live here.
+  </p>
+
+  <div class="tabs" data-tabs="profile">
+    <button class="on" data-tab="p-axes">Axes</button>
+    <button data-tab="p-curve">Response curve</button>
+    <button data-tab="p-logical">Logical axes</button>
+    <button data-tab="p-a2b">Axes → Buttons</button>
+    <button data-tab="p-buttons">Buttons</button>
+    <button data-tab="p-pov">POVs</button>
+    <button data-tab="p-bool">Boolean</button>
+  </div>
+
+  <div class="tabpanel" data-panel="p-axes">
+    <h3>Axes — physical</h3>
+    <p>Configuration of the raw axis signals, before they become logical axes.</p>
+    <table>
+      <thead><tr><th>Setting</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>Sensor type</td><td>How the sensor is read. <strong>Leave at default</strong> — the video warns that changing it will break the axis.</td></tr>
+        <tr><td>Virtual trimmer</td><td>Enables a software trimmer for the axis.</td></tr>
+        <tr><td>Auto calibration</td><td>Whether the axis self-calibrates.</td></tr>
+        <tr><td>Invert</td><td>Flips the axis direction.</td></tr>
+        <tr><td>Bias, %</td><td>Shifts the centre point. The main fine-tuning control for “my axis is centred 2% off”.</td></tr>
+        <tr><td>Low / High limits</td><td>Clamps the usable travel at each end.</td></tr>
+        <tr><td>Dynamic filtering</td><td>Smoothing applied to the signal.</td></tr>
+      </tbody>
+    </table>
+    <div class="note tip">
+      <span class="tag">The most common fix</span>
+      <p>
+        “My axis is slightly off-centre” is a <strong>bias</strong> problem, not a calibration
+        problem. Adjust bias before you re-run calibration.
+      </p>
+    </div>
+  </div>
+
+  <div class="tabpanel" data-panel="p-curve" hidden>
+    <h3>Response curve</h3>
+    <p>Per-axis curve shaping.</p>
+    <p>
+      Most modern sims let you set curves in-game, so you often do not need this. It exists for the
+      ones that do not — and for defining curves that a button can toggle at runtime.
+    </p>
+
+    <h4>The EQ flag</h4>
+    <p>
+      Each curve has an <strong>EQ</strong> checkbox. Ticked means “apply this curve to this axis
+      <em>always</em>”. Unticked means the curve is dormant, and can instead be switched on dynamically
+      — for example by a button.
+    </p>
+    <div class="note gotcha">
+      <span class="tag">Easy to miss</span>
+      <p>
+        If you edit a curve and nothing happens, you almost certainly forgot to tick <strong>EQ</strong>.
+      </p>
+    </div>
+  </div>
+
+  <div class="tabpanel" data-panel="p-logical" hidden>
+    <h3>Logical axes</h3>
+    <p>
+      The table that maps physical axes onto what Windows reports. Each logical axis has a
+      <strong>Source</strong> — the physical axis feeding it.
+    </p>
+    <p>
+      Worked example from the video: to make logical axis 1 be your X axis, find which physical axis
+      X actually is (on a default stick, physical axis 1) and set logical axis 1's source to it.
+    </p>
+    <div class="note info">
+      <span class="tag">Advice</span>
+      <p>“I'd recommend honestly leaving all these settings at defaults… you can come here and invert
+        it if you want to, definitely keep these on visible and enabled.”</p>
+    </div>
+  </div>
+
+  <div class="tabpanel" data-panel="p-a2b" hidden>
+    <h3>Axes → Buttons</h3>
+    <p>
+      Turns axis travel into button presses. Define <strong>zones</strong> — ranges of axis movement —
+      and each zone fires a different virtual button when the axis enters it.
+    </p>
+    <p>
+      The video's example sets up <strong>Edges&nbsp;2</strong>, so pulling the stick to either extreme
+      activates a different button. This is how you get “pull fully back = boost” style bindings.
+    </p>
+    <p>Double-click the button cell to pick which virtual button the zone triggers.</p>
+  </div>
+
+  <div class="tabpanel" data-panel="p-buttons">
+    <h3>Buttons</h3>
+    <p>Split into two layers, mirroring the axis model:</p>
+
+    <h4>Physical layer — what the switch does</h4>
+    <p>For each physical button you choose its <em>function type</em>:</p>
+    <table>
+      <thead><tr><th>Type</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>Button</td><td>Ordinary press. The default.</td></tr>
+        <tr><td>Button alternate</td><td>Second action while held.</td></tr>
+        <tr><td>Shift</td><td>Acts as a shift modifier for other buttons.</td></tr>
+        <tr><td>Temporary</td><td>Active only while held.</td></tr>
+        <tr><td>No function</td><td>Does nothing. Useful for disabling a switch you cannot remove.</td></tr>
+      </tbody>
+    </table>
+    <p>You set this by first pressing the button — in <a href="#test">Test → Buttons/POVs</a> — to see
+      its physical number, then clicking the matching cell here.</p>
+
+    <h4>Physical layer — which logical button it drives</h4>
+    <p>
+      Next to the function type you pick the <strong>logical button</strong> this physical button
+      activates. <strong>Auto mapping</strong> means “same number”. You can change it to any logical
+      button — the video remaps a trigger from logical button 10 to logical button 37, and later to a
+      shift-aware pair using a virtual button.
+    </p>
+
+    <h4>Logical layer — what the logical button does</h4>
+    <p>And finally, for each logical button, what Windows actually receives:</p>
+    <table>
+      <thead><tr><th>Action</th><th>Emits</th></tr></thead>
+      <tbody>
+        <tr><td>Button press</td><td>An ordinary button.</td></tr>
+        <tr><td>Hat switch</td><td>A hat-switch direction.</td></tr>
+        <tr><td>Keyboard</td><td>A keystroke — via the virtual keyboard from <a href="#global">Global</a>.</td></tr>
+        <tr><td>Mouse</td><td>A mouse button or movement.</td></tr>
+        <tr><td>Multimedia</td><td>Media keys (play, next track…).</td></tr>
+        <tr><td>System</td><td>System actions.</td></tr>
+        <tr><td>Macro</td><td>A macro sequence. See <a href="#macro">the Macro tab</a>.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note tip">
+      <span class="tag">The whole model in two sentences</span>
+      <p>
+        <strong>Physical layer:</strong> decide what the switch is and which logical button it fires.
+        <strong>Logical layer:</strong> decide what that logical button does. You must do both, and
+        they are on the same screen, which is why people lose track of which half they are editing.
+      </p>
+    </div>
+  </div>
+
+  <div class="tabpanel" data-panel="p-pov" hidden>
+    <h3>POVs</h3>
+    <p>Configuration for the hat switches.</p>
+    <ul>
+      <li>Output type: hat switch, or numpad.</li>
+      <li>Resolution: 4-way, 6-way, 8-way.</li>
+    </ul>
+    <h4>Wiring a hat to an existing button</h4>
+    <p>The video's example: the stick's hat <em>right</em> already activates logical button 28, so:</p>
+    <ol>
+      <li>In <strong>Buttons → Logical layer</strong>, find logical button 28.</li>
+      <li>Set its action to <strong>Hat switch</strong>, and pick which hat (hat 1).</li>
+      <li>Confirm in <a href="#test">Test</a> that the hat responds.</li>
+    </ol>
+    <p>Per the POV tab, each POV can also be 4-, 6- or 8-way.</p>
+  </div>
+
+  <div class="tabpanel" data-panel="p-bool" hidden>
+    <h3>Boolean</h3>
+    <p>
+      Small logical rules: <em>when this input is true, do that</em>. The video's example —
+      <strong>when physical button 12 is selected, activate virtual button 80</strong>, where
+      virtual button 80 is already wired to light an LED.
+    </p>
+    <p>
+      This is how you build conditional behaviour without a full macro. More detail is in the
+      manual.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="macro">
+  <h2><a class="anchor" href="#macro">#</a>Macro tab</h2>
+
+  <p>Records and plays back a sequence of inputs. Two things to set up.</p>
+
+  <h3>1. Point a button at a macro</h3>
+  <ol>
+      <li>Find the logical button you want to trigger it — e.g. logical button 80.</li>
+      <li>In <strong>Buttons → Logical layer</strong>, set its action to <strong>Macro</strong>.</li>
+      <li>Choose a macro number, e.g. macro 5.</li>
+    </ol>
+
+  <h3>2. Record what the macro does</h3>
+  <ol>
+      <li>Go to the <strong>Macro</strong> tab, select the same macro number.</li>
+      <li>Add entries — the video picks “mouse right button” and the keyboard <code>A</code> key.</li>
+      <li>Click <strong>Set</strong>.</li>
+      <li>Adjust its timing and repeat settings in the same panel.</li>
+    </ol>
+
+  <p>Now pressing your stick button replays that whole sequence.</p>
+
+  <div class="note tip">
+    <span class="tag">Two arrays</span>
+    <p>The current build exposes <strong>Macros Array 1</strong> and <strong>Macros Array 2</strong>,
+      so you can keep two independent macro banks and switch between them.</p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="recipes">
+  <h2><a class="anchor" href="#recipes">#</a>Recipes</h2>
+  <div class="recipe">
+
+  <h3>Change an LED's colour</h3>
+  <ol>
+    <li>Select your device in the blue bar at the top.</li>
+    <li><strong>Global → LEDs.</strong></li>
+    <li>Pick an event — usually <strong>Event 0</strong> for the idle state.</li>
+    <li>Choose the LED, set the mode, then pick the colour.</li>
+    <li>Press <kbd class="key">Set</kbd>. Look at the physical stick — it has changed.</li>
+  </ol>
+
+  <h3>Find out which physical button a switch is</h3>
+  <ol>
+    <li><strong>Test → Buttons / POVs.</strong></li>
+    <li>Press the switch on your stick.</li>
+    <li>Read the number that lights up. Write it down.</li>
+  </ol>
+
+  <h3>Remap a button</h3>
+  <ol>
+    <li>Find its physical number (recipe above).</li>
+    <li><strong>Profile → Buttons → Physical layer.</strong> Click that row.</li>
+    <li>Set the function type — usually leave as <strong>Button</strong>.</li>
+    <li>Set which logical button it drives — leave as <strong>Auto</strong> unless you have a reason.</li>
+    <li>Now in the <strong>Logical layer</strong>, find that logical button and set what it does.</li>
+    <li>Press <kbd class="key">Set</kbd>.</li>
+  </ol>
+
+  <h3>Make a switch act as Shift</h3>
+  <ol>
+    <li><strong>Profile → Buttons → Physical layer.</strong></li>
+    <li>Find the switch's physical number and set its type to <strong>Shift</strong>.</li>
+    <li>Press <kbd class="key">Set</kbd>.</li>
+    <li>Now holding it should modify what your other buttons do. Verify on the physical stick.</li>
+  </ol>
+
+  <h3>Set up a throttle-shift layer</h3>
+  <ol>
+    <li>Make your shifter a <strong>Shift</strong> physical button.</li>
+    <li>In the physical layer, set your trigger to drive logical button 79.</li>
+    <li>Assign logical button 80 to a <strong>virtual button</strong> — it has no physical switch of
+      its own.</li>
+    <li>In the logical layer, give buttons 79 and 80 different actions.</li>
+    <li><strong>Set.</strong> Trigger alone → 79. Trigger + shift → 80.</li>
+  </ol>
+
+  <h3>Fix a stick that has gone unresponsive</h3>
+  <ol>
+    <li>Press <kbd class="key">Restart</kbd> in the Action tab. This is the cheap fix.</li>
+    <li>Still stuck? Replug the USB cable.</li>
+    <li>Still stuck? <strong>Tools → Default</strong> resets everything to factory settings — this
+      loses your configuration, so save it first if you have one.</li>
+    <li>Still stuck? <strong>Tools → Bootloader</strong> and reflash the firmware.</li>
+  </ol>
+
+  <h3>Keep separate setups per game</h3>
+  <ol>
+    <li>Configure for game A. <kbd class="key">Save</kbd> → <code>GameA.cfg</code>.</li>
+    <li>Configure for game B. <kbd class="key">Save</kbd> → <code>GameB.cfg</code>.</li>
+    <li>Before playing, <kbd class="key">Load</kbd> the right file.</li>
+    <li>Press <kbd class="key">Set</kbd> — or turn on <strong>Settings → Set After Load</strong> and
+      skip it.</li>
+  </ol>
+
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="gotchas">
+  <h2><a class="anchor" href="#gotchas">#</a>Gotchas</h2>
+
+  <p>The things that reliably waste people's time.</p>
+
+  <div class="note gotcha">
+    <span class="tag">You forgot Set</span>
+    <p>Nothing you change in the UI reaches the hardware until you press
+      <kbd class="key">Set</kbd>. This is by far the most common confusion.</p>
+  </div>
+
+  <div class="note gotcha">
+    <span class="tag">Physical ≠ logical</span>
+    <p>You are editing a logical button; the switch you pressed is a physical button. They are
+      different numberings connected by a table you must set deliberately.</p>
+  </div>
+
+  <div class="note gotcha">
+    <span class="tag">Two layers on the Buttons screen</span>
+    <p>Set <em>what the switch does</em> on the physical layer and <em>what the game receives</em> on
+      the logical layer. Both are required. Doing only one changes nothing.</p>
+  </div>
+
+  <div class="note gotcha">
+    <span class="tag">Curve without EQ</span>
+    <p>Editing a response curve and seeing no effect almost always means EQ is unticked.</p>
+  </div>
+
+  <div class="note gotcha">
+    <span class="tag">Not every LED is RGB</span>
+    <p>You cannot pick a colour for a fixed-colour LED. The software will let you try; nothing will
+      change.</p>
+  </div>
+
+  <div class="note gotcha">
+    <span class="tag">Only one device at a time</span>
+    <p>With a stick and a throttle both connected, configuration applies to whichever you selected
+      in the blue bar. Re-select when you switch.</p>
+  </div>
+
+  <div class="note gotcha">
+    <span class="tag">zconfig.ini is plain text</span>
+    <p>If an editor mangles it, you have lost your settings and the hidden UI. Keep a copy.</p>
+  </div>
+
+  <div class="note gotcha">
+    <span class="tag">It crashes, sometimes</span>
+    <p>The video's author notes the software “sometimes randomly crashes for no reason”. That was true
+      in 2022. Expect the occasional reset; keep your config files.</p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="glossary">
+  <h2><a class="anchor" href="#glossary">#</a>Glossary</h2>
+
+  <table>
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Physical button / axis</strong></td><td>The raw hardware input, as wired and numbered by VKB.</td></tr>
+      <tr><td><strong>Logical button / axis</strong></td><td>The numbered input that Windows and your sim actually see.</td></tr>
+      <tr><td><strong>Virtual button</strong></td><td>A logical button with no physical switch, triggered by firmware logic. Lets one physical input produce several logical outputs.</td></tr>
+      <tr><td><strong>Bias</strong></td><td>Offset applied to an axis centre. The fix for a slightly off-centre axis.</td></tr>
+      <tr><td><strong>Calibration</strong></td><td>One-time procedure that learns each axis's true extremes.</td></tr>
+      <tr><td><strong>POV / Hat</strong></td><td>The directional pad. 4-way, 6-way or 8-way.</td></tr>
+      <tr><td><strong>Event (LED)</strong></td><td>The condition that changes an LED's colour or state.</td></tr>
+      <tr><td><strong>EQ</strong></td><td>The flag that makes a response curve permanently active.</td></tr>
+      <tr><td><strong>Zone (Axes→Buttons)</strong></td><td>A range of axis travel that fires a button.</td></tr>
+      <tr><td><strong>Partial Write</strong></td><td>Letting you choose which categories of settings to push to the stick.</td></tr>
+      <tr><td><strong>Auto mapping</strong></td><td>“Physical button N drives logical button N.”</td></tr>
+      <tr><td><strong>zconfig.ini</strong></td><td>The text config file that unlocks the hidden parts of the UI.</td></tr>
+      <tr><td><strong>Microcontroller</strong></td><td>The chip inside the stick. NJoy 32, for example.</td></tr>
+      <tr><td><strong>Firmware</strong></td><td>The software running on that microcontroller. Flashed with ZBootloader.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ==================================================================== -->
+<section id="beyond">
+  <h2><a class="anchor" href="#beyond">#</a>What the video misses</h2>
+
+  <p>
+    VKBDevCfg is a ~23&nbsp;MB C++Builder application whose binary embeds <strong>69 form
+    definitions</strong> — of which roughly 50 are VKB's own windows and dialogs and about 16
+    belong to the bundled FastReport library. Across them sit thousands of controls. The video
+    openly says it covers only the basics. Decompiling the current build to map its UI surfaces a
+    long tail of features the walkthrough never mentions.
+  </p>
+
+  <table>
+    <thead><tr><th>Feature</th><th>What it appears to be</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Visual Diagram</strong></td><td>An eye icon in the main window that opens a graphical view of your device. Likely a much clearer way to understand the physical→logical mapping than a grid of cells.</td></tr>
+      <tr><td><strong>Visual Mapping</strong></td><td>Related — a visual representation of button assignments.</td></tr>
+      <tr><td><strong>Curve Wizard</strong></td><td>A guided tool for building response curves.</td></tr>
+      <tr><td><strong>NXT SEM Axes Wizard</strong></td><td>A wizard for generating axis definitions on NXT-series sticks.</td></tr>
+      <tr><td><strong>Create MobiFlight Connector JSON</strong></td><td>Exports a MobiFlight connector file — this stick can drive a physical cockpit panel.</td></tr>
+      <tr><td><strong>Comparators / Detents</strong></td><td>Advanced per-axis logic for defining thresholds and notch detents.</td></tr>
+      <tr><td><strong>Functional generator</strong></td><td>Injects synthetic axis motion — for testing software, not the stick.</td></tr>
+      <tr><td><strong>Script / Script Test</strong></td><td>Scriptable automation of the config process.</td></tr>
+      <tr><td><strong>Find &amp;&amp; Auto Config</strong></td><td>Automatic configuration discovery.</td></tr>
+      <tr><td><strong>Global SHIFTs / SubSHIFTs</strong></td><td>Nested modifier layers beyond the single Shift button type.</td></tr>
+      <tr><td><strong>MultiDevice, Master / Slave Settings</strong></td><td>Coordinating several VKB devices as one system.</td></tr>
+      <tr><td><strong>Virtual BUS over USB</strong></td><td>Virtual controller exposed over USB.</td></tr>
+      <tr><td><strong>Trackers / Gyro / Compass</strong></td><td>Head-tracking and sensor support.</td></tr>
+      <tr><td><strong>Get/Set Feature, HID Set 1 / 2</strong></td><td>Direct access to the device's HID feature reports — the raw protocol, exposed in the UI.</td></tr>
+      <tr><td><strong>Led Gauge, System LEDs color inversion</strong></td><td>LED gauge displays and global LED behaviour.</td></tr>
+      <tr><td><strong>Raw Axes Data / Axis Data</strong></td><td>Low-level axis telemetry viewers.</td></tr>
+      <tr><td><strong>Macros Array 1 / 2</strong></td><td>Two independent macro banks.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note info">
+    <span class="tag">How this was determined</span>
+    <p>
+      Every label above is read directly out of the application's compiled-in form definitions. It
+      tells you what exists, not necessarily what each does — several are self-explanatory, some are
+      not, and the vendor manual remains the authority on behaviour.
+    </p>
+  </div>
+
+  <div class="note tip">
+    <span class="tag">If you only explore one thing</span>
+    <p>
+      Try <strong>Visual Diagram</strong> early. If it does what the name suggests, it may be the
+      single best answer to “how do I actually understand this program”.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="source">
+  <h2><a class="anchor" href="#source">#</a>The source video</h2>
+
+  <p>
+    The reference sections of this guide are built from
+    <a href="https://www.youtube.com/watch?v=KkrukbU1-rE" target="_blank" rel="noopener">“VKBDevCfg Basics”</a>
+    by <strong>DCS Tutorial</strong> (27 June 2022) — a patient half-hour walkthrough of the whole
+    program, and still the best introduction there is. Watch it. The chapters below jump to the
+    matching moment.
+  </p>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>Time</th><th>Topic</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1s" target="_blank" rel="noopener">0:01</a></td><td>Intro &amp; what you need</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=21s" target="_blank" rel="noopener">0:21</a></td><td>Downloading the software</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=110s" target="_blank" rel="noopener">1:50</a></td><td>Unlocking the full UI &mdash; zconfig.ini</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=197s" target="_blank" rel="noopener">3:17</a></td><td>Firmware update</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=301s" target="_blank" rel="noopener">5:01</a></td><td>The window: two halves</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=321s" target="_blank" rel="noopener">5:21</a></td><td>Action tab</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=474s" target="_blank" rel="noopener">7:54</a></td><td>Tools tab</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=566s" target="_blank" rel="noopener">9:26</a></td><td>Settings tab</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=674s" target="_blank" rel="noopener">11:14</a></td><td>Top bar summary</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=690s" target="_blank" rel="noopener">11:30</a></td><td>The five bottom tabs</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=705s" target="_blank" rel="noopener">11:45</a></td><td>Test &rarr; Info</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=718s" target="_blank" rel="noopener">11:58</a></td><td>Test &rarr; Axes / Misc</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=824s" target="_blank" rel="noopener">13:44</a></td><td>Global tab</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=906s" target="_blank" rel="noopener">15:06</a></td><td>Global &rarr; External</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=927s" target="_blank" rel="noopener">15:27</a></td><td>Global &rarr; LEDs</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1028s" target="_blank" rel="noopener">17:08</a></td><td>Profile tab</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1035s" target="_blank" rel="noopener">17:15</a></td><td>Axes</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1096s" target="_blank" rel="noopener">18:16</a></td><td>Response curve</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1174s" target="_blank" rel="noopener">19:34</a></td><td>Logical axes</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1244s" target="_blank" rel="noopener">20:44</a></td><td>Axes &rarr; buttons</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1285s" target="_blank" rel="noopener">21:25</a></td><td>Buttons</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1581s" target="_blank" rel="noopener">26:21</a></td><td>POVs</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1637s" target="_blank" rel="noopener">27:17</a></td><td>Boolean</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1678s" target="_blank" rel="noopener">27:58</a></td><td>Macros</td></tr>
+      <tr><td><a href="https://www.youtube.com/watch?v=KkrukbU1-rE&amp;t=1744s" target="_blank" rel="noopener">29:04</a></td><td>Wrap-up</td></tr>
+    </tbody>
+  </table></div>
+
+  <p><a class="btn" href="https://www.youtube.com/watch?v=KkrukbU1-rE" target="_blank" rel="noopener">Watch the original video</a></p>
+</section>
+
+<footer>
+  <p>
+    Source video: <strong>“VKBDevCfg Basics” — DCS Tutorial</strong>, 27 June 2022,
+    <a href="https://www.youtube.com/watch?v=KkrukbU1-rE" target="_blank" rel="noopener">youtube.com/watch?v=KkrukbU1-rE</a>.
+    All observed behaviour and UI descriptions originate there.
+  </p>
+  <p>
+    Reverse-engineering notes are based on <code>VKBDevCfg-C v0.93.89</code> as distributed from
+    VKB's official downloads page, and on a VKBsim Gladiator EVO R whose configuration was read,
+    changed by one setting, and restored.
+    VKB and VKBsim are trademarks of their respective owners. This page is an independent,
+    unaffiliated documentation effort.
+  </p>
+</footer>
+
+</main>
+</div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
