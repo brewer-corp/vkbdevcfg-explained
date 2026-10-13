@@ -156,3 +156,6 @@ table.lines { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-
 
 .btngrid span.on.line { background: var(--accent-2); border-color: var(--accent-2); box-shadow: 0 0 10px rgba(47,180,255,.6); }
 .pill.ok + .pill, .pill + .pill { margin-left: 6px; }
+.sends { display: inline-flex; align-items: center; gap: 6px; }
+.sends select { min-width: 118px; background: #000; color: var(--fg); border: 1px solid var(--line-2); font: 12px var(--mono); padding: 3px 4px; }
+.sends input:disabled { opacity: .55; }

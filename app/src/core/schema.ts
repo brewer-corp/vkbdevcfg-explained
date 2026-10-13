@@ -108,15 +108,16 @@ export const LINES = 128;
 export const physicalEntry = (line: number) => 0x10c + 2 * line;
 export const logicalEntry = (line: number) => 0x20c + 2 * line;
 
-const PHYS_TYPES: Record<number, string> = {
-  0: 'AUX axes', 1: 'Generator', 2: 'Fix axes', 3: 'Cyclic switch', 4: 'Boolean', 6: 'Trimmer',
-  9: 'SHIFT', 10: 'Tempo', 12: 'Encoder', 13: 'Curves v2',
-};
+const PHYS_TYPES: Record<number, string> = { 2: 'Fix axes', 4: 'Boolean', 6: 'Trimmer', 13: 'Curves v2' };
 const POV_DIR = ['up', 'right', 'down', 'left'];
+const GENERATORS = ['G1', 'G8', 'GT', 'GT+', 'GTR', 'GTR2', 'GTE', 'GTE+'];
+const TEMPO = ['1', '2', '3', '3S', '3A', '4'];
+const ENCODER = ['virtual', 'advanced', '1/4', '2/4', '4/4'];
+const SHIFT_MODE = ['', 'alternate', 'cyclic'];
 
 export interface PhysicalFn { kind: string; detail: string; plain: boolean; wide: boolean }
 
-/** What a wired line is. `wide` records also consume the next line's entry. */
+/** What a wired line is. `wide` records also consume the next line's entry. `line` is 0-based. */
 export function physicalFunction(block: Uint8Array, line: number): PhysicalFn {
   const at = physicalEntry(line);
   const b0 = block[at], b1 = block[at + 1];
@@ -127,43 +128,73 @@ export function physicalFunction(block: Uint8Array, line: number): PhysicalFn {
     return { kind: 'Button', detail: parts.join(', '), plain: true, wide: false };
   }
   const type = b0 >> 3, sub = b0 & 7;
+  const to = (b1 & 0x7f) + 1;                                  // most functions name another line as "line − 1"
   let kind = PHYS_TYPES[type] ?? `Type ${type}`, detail = '';
-  if (type === 7) { kind = sub < 4 ? 'POV switch' : 'uPOV switch'; detail = sub < 4 ? `hat ${(b1 & 3) + 1}, ${POV_DIR[sub]}` : ''; }
-  else if (type === 5) kind = ['Sync', 'Replica button', 'Curves', 'Curves (alt)', 'Rel axes', 'Rel axes', 'uStick switch', 'Parametric'][sub];
-  else if (type === 8) kind = sub < 4 ? 'ButtonX' : 'Switch CB';
-  else if (type === 11) kind = sub === 4 ? 'ButAlt / Radio' : sub === 5 ? 'Rotary switch' : sub === 6 ? 'Dependent button' : 'Toggle';
-  else if (type === 14) kind = sub === 0 ? 'SubSHIFT' : 'ButtonS / ButtonM';
-  else if (type === 15) kind = 'No function';
-  else if (type === 9) {                       // bits 0-1 are a mask (confirmed on hardware), bit 2 = also send a button
-    if (!(sub & 3)) kind = 'SHIFT (none selected)';
-    detail = [sub & 1 && 'SHIFT1', sub & 2 && 'SHIFT2', sub & 4 && 'also a button'].filter(Boolean).join(' + ');
+  if (type === 0) { kind = 'AUX axes'; detail = `axis ${((b1 >> 3) & 7) + 1} → axis ${(b1 & 7) + 1}`; }
+  else if (type === 1) { kind = 'Generator'; detail = `${GENERATORS[sub]}, value ${((b1 + 1) & (sub === 4 || sub === 5 ? 0x3f : 0x7f))}`; }
+  else if (type === 3) { kind = 'Cyclic switch'; detail = `${sub + 1} positions from line ${((b1 + 1) & 0x7f)}`; }
+  else if (type === 5) {
+    kind = ['Sync', 'Replica button', 'Curves', 'Curves (alt)', 'Rel axes', 'Rel axes', 'uStick switch', 'Parametric'][sub];
+    if (sub === 1) detail = `of line ${to}`;
+    if (sub === 6) detail = `hat ${(b1 & 3) + 1}, ${['button', 'cyclic', 'tempo', 'SHIFT', 'SubSHIFT', 'tempo B'][(b1 >> 2) & 7] ?? '?'}`;
   }
-  else if (type === 12) detail = `mode ${sub}`;
+  else if (type === 7) { kind = sub < 4 ? 'POV switch' : 'uPOV switch'; detail = sub < 4 ? `hat ${(b1 & 3) + 1}, ${POV_DIR[sub]}` : ''; }
+  else if (type === 8) { kind = sub < 4 ? 'ButtonX' : 'Switch CB'; detail = sub < 4 ? `line ${to} under SubSHIFT 7` : `complement on line ${to}`; }
+  else if (type === 9) {                       // bits 0-1 are a mask, bit 2 = also send a button, b1 + 1 = mode
+    kind = sub & 3 ? 'SHIFT' : 'SHIFT (none selected)';
+    detail = [sub & 1 && 'SHIFT1', sub & 2 && 'SHIFT2', sub & 4 && 'also a button', SHIFT_MODE[(b1 + 1) & 3]].filter(Boolean).join(' + ');
+  }
+  else if (type === 10) { kind = `Tempo ${TEMPO[sub] ?? sub}`; detail = sub === 3 ? '' : `long press → line ${to}`; }
+  else if (type === 11) {
+    if (sub === 4 && b1 >> 5 === 7) { kind = 'ButAlt'; detail = [b1 & 1 ? 'starts on' : 'starts off', !(b1 & 2) && 'pulse'].filter(Boolean).join(', '); }
+    else if (sub === 4) { kind = 'Radiobutton'; detail = `group ${(b1 >> 5) + 1}${b1 & 1 ? ', master' : ''}`; }
+    else if (sub === 5) kind = 'Rotary switch';
+    else if (sub === 6) { kind = 'Dependent button'; detail = `master: line ${to}`; }
+    else { kind = 'Toggle'; detail = (b1 & 0x7f) === line ? 'pulse on close' : `on open → line ${to}`; }
+  }
+  else if (type === 12) { kind = 'Encoder'; detail = ENCODER[sub] ?? `mode ${sub}`; }
+  else if (type === 14) {
+    if (sub === 0) { kind = `SubSHIFT ${b1 & 7}`; detail = [b1 & 8 && 'alternate', b1 & 0x80 && 'also a button'].filter(Boolean).join(' + '); }
+    else if (b1 & 0x80) { kind = 'ButtonM'; detail = `line ${to}, modal switch ${sub}`; }
+    else { kind = 'ButtonS'; detail = `line ${to} under SubSHIFT ${sub}`; }
+  }
+  else if (type === 15) kind = 'No function';
   return { kind, detail, plain: false, wide: type === 4 || type === 12 };
 }
 
-export interface LogicalFn { kind: string; detail: string; button: number | null }
+export interface LogicalFn { kind: string; detail: string; button: number | null; auto: boolean }
 
-/** What a line sends to the PC. `button` is the joystick button number when it is a plain button. */
+const HAT_DIR = ['up', 'up-right', 'right', 'down-right', 'down', 'down-left', 'left', 'up-left'];
+
+/** What a line sends to the PC. `button` is the joystick button number when it sends one; `line` is 0-based. */
 export function logicalFunction(block: Uint8Array, line: number): LogicalFn {
   const at = logicalEntry(line);
   const lo = block[at], hi = block[at + 1];
-  if (lo === 0xff) return { kind: hi === 0xff ? '—' : 'Auto', detail: '', button: null };
+  // FF FF is "AutoMapping": the line sends the button with its own number (confirmed on hardware).
+  if (lo === 0xff) return { kind: 'Auto', detail: '', button: line + 1, auto: true };
   if (lo & 0x80) {
     const second = hi === 0xff ? '' : `+ button ${((hi + 1) & 0x7f)}`;
-    return { kind: 'Button', detail: second, button: (lo & 0x7f) + 1 };
+    return { kind: 'Button', detail: second, button: (lo & 0x7f) + 1, auto: false };
   }
-  const named: Record<number, string> = { 0x74: 'Hat', 0x76: 'Macro', 0x77: 'Mouse', 0x78: 'System', 0x79: 'Multimedia',
+  const v = (hi + 1) & 0xff;
+  if (lo === 0x74) return { kind: 'Hat', detail: `hat ${(v >> 6) + 1}, ${HAT_DIR[v & 7]}`, button: null, auto: false };
+  const named: Record<number, string> = { 0x76: 'Macro', 0x77: 'Mouse', 0x78: 'System', 0x79: 'Multimedia',
     0x7a: 'Audio', 0x7b: 'Application', 0x7c: 'Void', 0x7f: 'No function' };
-  if (named[lo]) return { kind: named[lo], detail: lo === 0x76 ? `#${((hi + 1) & 0x7f)}` : '', button: null };
-  return { kind: 'Keyboard', detail: `key 0x${lo.toString(16)}`, button: null };
+  if (named[lo]) return { kind: named[lo], detail: lo === 0x76 ? `#${v & 0x7f}` : lo >= 0x78 && lo <= 0x7b ? `entry ${hi + 1}` : '', button: null, auto: false };
+  return { kind: 'Keyboard', detail: `HID key 0x${(lo + 1).toString(16)}`, button: null, auto: false };
 }
 
-/** Assign a joystick button (1..127) to a line, or null to clear it. */
-export function setLogicalButton(block: Uint8Array, line: number, button: number | null): void {
+export type LogicalChoice = 'button' | 'auto' | 'none';
+
+/** Set what a line sends: a numbered button, the button with the line's own number, or nothing. */
+export function setLogical(block: Uint8Array, line: number, choice: LogicalChoice, button = line + 1): void {
   const at = logicalEntry(line);
-  block[at] = button === null ? 0xff : 0x80 | ((button - 1) & 0x7f);
+  block[at] = choice === 'auto' ? 0xff : choice === 'none' ? 0x7f : 0x80 | ((button - 1) & 0x7f);
   block[at + 1] = 0xff;
+}
+
+export function setLogicalButton(block: Uint8Array, line: number, button: number | null): void {
+  setLogical(block, line, button === null ? 'auto' : 'button', button ?? undefined);
 }
 
 // ---------------------------------------------------------------- LEDs ---

@@ -10,7 +10,7 @@ export function Overview({ session, ed, go, changed }: { session: Session; ed: E
   const f = (k: string) => LOGICAL_AXIS.find((d) => d.key === k)!;
   const axes = [...Array(AXIS_SLOTS).keys()].filter((n) => readField(b, logicalAxisBase(n), f('en')))
     .map((n) => HID_USAGES[readField(b, logicalAxisBase(n), f('usage'))]);
-  const buttons = [...Array(LINES).keys()].filter((l) => logicalFunction(b, l).button !== null).length;
+  const buttons = [...Array(LINES).keys()].filter((l) => { const f = logicalFunction(b, l); return f.button !== null && !f.auto; }).length;
   const leds = [...Array(LED_EVENT_MAX).keys()].filter((i) => !ledEvent(b, i).empty).length;
   const ext = [...Array(8).keys()].map((i) => extDevice(b, i)).filter((d) => d.type !== 0);
 

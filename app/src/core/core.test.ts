@@ -4,9 +4,9 @@ import { BLOCK_SIZE, blockCrcOk, cfgDecrypt, cfgEncrypt, diffBlocks, firmwareTex
 import { MockStick, demoBlock } from './mock';
 import { STATUS_OK, Stick, longWriteFrames } from './protocol';
 import { LOGICAL_AXIS, PHYSICAL_AXIS, extDevice, ledEvent, logicalAxisBase, logicalFunction, physicalAxisBase,
-  physicalFunction, readField, setLogicalButton, writeField, inputType } from './schema';
+  physicalFunction, readField, setLogical, setLogicalButton, writeField, inputType, physicalEntry, logicalEntry } from './schema';
 import { existsSync, readFileSync } from 'node:fs';
-import { parseInput } from '../ui/Live';
+import { parseAfter, parseInput } from '../ui/Live';
 import { extRegisters, wiring } from './wiring';
 
 const text = (s: string) => new TextEncoder().encode(s);
@@ -122,7 +122,9 @@ describe('schema, against the demo block', () => {
     expect(logicalFunction(b, 9).button).toBe(1);
     const c = new Uint8Array(b); setLogicalButton(c, 9, 40);
     expect(logicalFunction(c, 9).button).toBe(40);
-    setLogicalButton(c, 9, null); expect(logicalFunction(c, 9).button).toBeNull();
+    setLogicalButton(c, 9, null); expect(logicalFunction(c, 9)).toMatchObject({ kind: 'Auto', auto: true, button: 10 });   // sends its own number
+    setLogical(c, 9, 'none'); expect(logicalFunction(c, 9)).toMatchObject({ kind: 'No function', button: null });
+    expect(logicalFunction(c, 9).auto).toBe(false);
   });
   it('LED events and external devices', () => {
     expect(ledEvent(b, 0)).toMatchObject({ led: 0, typeName: 'Always', c1: [0, 0, 3], c2: [3, 0, 0], mode: 1 });
@@ -141,7 +143,9 @@ describe('live input report', () => {
     expect(idle.length).toBe(63);
     const s = parseInput(idle, 1);
     expect(s.axes).toEqual([2048, 2048, 1024, 1194, 2048, 2048, 0, 0]);
-    expect(s.hat).toBe(8);
+    expect(s.hats).toEqual([8, 8, 8, 8]);
+    expect(s.subShifts).toEqual([]);
+    expect(s.after).toBeNull();
     expect([...s.buttons]).toEqual([]);
     expect([...s.lines]).toEqual([1]);
     expect(s.shift1 || s.shift2).toBe(false);
@@ -153,6 +157,18 @@ describe('live input report', () => {
     expect([...s.lines]).toEqual([1, 102, 111]);
     expect([...s.buttons]).toEqual([102]);
     expect(s.shift1).toBe(true);
+  });
+  it('reads four hats and the sub-shift flags', () => {
+    const d = new Uint8Array(idle); d[34] = 2; d[36] = 6; d[38] = 4; d[0x2c] = 0x0c; d[0x2d] = 0x80;
+    const s = parseInput(d, 3);
+    expect(s.hats).toEqual([8, 2, 6, 4]);
+    expect(s.subShifts).toEqual([1, 2, 7]);
+  });
+  it('reads the after-functions line map from report 0x0C', () => {
+    // captured from the stick: lines 70, 102 and 111 active after their functions
+    const r = fromHex('0000000000000000 20 000000 2040 0000' + '00'.repeat(47));
+    expect([...parseAfter(r)]).toEqual([70, 102, 111]);
+    expect([...parseInput(idle, 4, r).after!]).toEqual([70, 102, 111]);
   });
   it('ignores the tail without its 0xA5 marker', () => {
     const d = new Uint8Array(idle); d[0x2e] = 0;
@@ -197,5 +213,34 @@ describe('wiring: the vendor diagram\'s control names', () => {
   it('names nothing without a known grip', () => {
     const none = new Uint8Array(b); none.fill(0, 0x330, 0x340);
     expect(wiring(none).size).toBe(0);
+  });
+});
+
+describe('button functions, as confirmed on hardware', () => {
+  const b = demoBlock();
+  const phys = (bytes: number[]) => { const c = new Uint8Array(b); c.set(bytes, physicalEntry(69)); return physicalFunction(c, 69); };
+  const logic = (bytes: number[]) => { const c = new Uint8Array(b); c.set(bytes, logicalEntry(69)); return logicalFunction(c, 69); };
+  it('physical', () => {
+    expect(phys([0x5a, 0x3b])).toMatchObject({ kind: 'Toggle', detail: 'on open → line 60' });
+    expect(phys([0x5a, 0x45])).toMatchObject({ kind: 'Toggle', detail: 'pulse on close' });
+    expect(phys([0x5c, 0xfe])).toMatchObject({ kind: 'ButAlt', detail: 'starts off' });
+    expect(phys([0x5c, 0x21])).toMatchObject({ kind: 'Radiobutton', detail: 'group 2, master' });
+    expect(phys([0x51, 0x3b])).toMatchObject({ kind: 'Tempo 2', detail: 'long press → line 60' });
+    expect(phys([0x70, 0x09])).toMatchObject({ kind: 'SubSHIFT 1', detail: 'alternate' });
+    expect(phys([0x72, 0x31])).toMatchObject({ kind: 'ButtonS', detail: 'line 50 under SubSHIFT 2' });
+    expect(phys([0x40, 0x31])).toMatchObject({ kind: 'ButtonX', detail: 'line 50 under SubSHIFT 7' });
+    expect(phys([0x44, 0x31])).toMatchObject({ kind: 'Switch CB', detail: 'complement on line 50' });
+    expect(phys([0x5e, 0x6e])).toMatchObject({ kind: 'Dependent button', detail: 'master: line 111' });
+    expect(phys([0x29, 0x65])).toMatchObject({ kind: 'Replica button', detail: 'of line 102' });
+    expect(phys([0x49, 0x00])).toMatchObject({ kind: 'SHIFT', detail: 'SHIFT1 + alternate' });
+    expect(phys([0x49, 0xff])).toMatchObject({ kind: 'SHIFT', detail: 'SHIFT1' });
+    expect(phys([0x09, 0x00])).toMatchObject({ kind: 'Generator', detail: 'G8, value 1' });
+    expect(phys([0x39, 0x01])).toMatchObject({ kind: 'POV switch', detail: 'hat 2, right' });
+  });
+  it('logical', () => {
+    expect(logic([0x74, 0x85])).toMatchObject({ kind: 'Hat', detail: 'hat 3, left' });
+    expect(logic([0x74, 0xff])).toMatchObject({ kind: 'Hat', detail: 'hat 1, up' });
+    expect(logic([0xff, 0xff])).toMatchObject({ kind: 'Auto', button: 70 });
+    expect(logic([0x03, 0xff])).toMatchObject({ kind: 'Keyboard', detail: 'HID key 0x4' });
   });
 });
