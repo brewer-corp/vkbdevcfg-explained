@@ -6,7 +6,9 @@ import type { LiveState } from './Live';
 
 export function Buttons({ ed, live }: { ed: Editor; live: LiveState | null }) {
   const [all, setAll] = useState(false);
-  const locked = !ed.canEdit('static');
+  // The entry encoding (line -> joystick button) was confirmed on hardware; which physical control
+  // is wired to which line was not, so the live highlight is the way to find a line.
+  const locked = !ed.canEdit('verified');
   const rows = [];
   let skip: boolean = false;
   for (let line = 0; line < LINES; line++) {
@@ -41,7 +43,6 @@ export function Buttons({ ed, live }: { ed: Editor; live: LiveState | null }) {
       </p>
       <label className="toggle"><input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} /> Show all 128 lines</label>
       {live && <p className="note ok">Live: press a control on the stick and the line that sends its button lights up.</p>}
-      {locked && <p className="note">Button mappings come from static analysis and are locked. Turn on <b>Experimental fields</b> to edit them.</p>}
       <table className="lines">
         <thead><tr><th>Line</th><th>It is a</th><th></th><th>Sends button</th><th>Raw (job · output)</th></tr></thead>
         <tbody>{rows}</tbody>

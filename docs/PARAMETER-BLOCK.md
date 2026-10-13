@@ -36,6 +36,9 @@ What has actually been confirmed on a device:
 | CRC-32 of `block[8:]` | `0x004` | Verified on every read. The device recomputes it on every write, whatever the host sends. |
 | Firmware version | `0x008` | Matches the USB `bcdDevice`. |
 | Ten axis fields: enable, visible, invert, centre, source sensor, HID usage, precision, both deadzones, sensor inversion | logical and physical axis records | Each changed in turn; the effect was observed in the stick's HID descriptor or idle input report ([`BLOCK-AXES.md`](BLOCK-AXES.md) §9a). |
+| Response curves: the enable bit, the ten points, the per-axis curve number; anti-deadzone; multiplier; upper gain; bias | physical axis records, `0x0BC`, `0x69A` | As above. A curve point scales the whole axis value by value / 128. |
+| Axis-to-buttons word, and the "Button *N*" logical entry | `0x30C`, `0x20C` | An axis split into four zones held the expected button at rest. |
+| Button tables: logical Button / second button / HAT / No Function / Void; physical Button with shift fields, POV Switch, NoF, SHIFT | `0x10C`, `0x20C` | Tested on two virtual lines held down by axis zones ([`BLOCK-BUTTONS.md`](BLOCK-BUTTONS.md) §11a). |
 | Filter grade, physical axis 7 | `0x0B5` bits 5–7 | Written and read back. Its effect has not been observed. |
 
 And what real profiles show by difference:

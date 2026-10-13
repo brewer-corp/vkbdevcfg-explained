@@ -46,7 +46,7 @@ function Curve({ ed, n }: { ed: Editor; n: number }) {
   const pts = [...ed.block.subarray(at, at + CURVE_POINTS)];
   const y = (x: number, v: number) => Math.min(1, (x * v) / 128);
   const path = (vals: number[]) => 'M0,100 ' + vals.map((v, i) => `L${(i + 1) * 10},${100 - y((i + 1) / 10, v) * 100}`).join(' ');
-  const locked = !ed.canEdit('static');
+  const locked = !ed.canEdit('verified');   // curve points and the enable bit were confirmed on hardware
   return (
     <div className="curve">
       <h3>Response curve</h3>

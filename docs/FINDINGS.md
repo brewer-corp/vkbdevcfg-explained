@@ -318,11 +318,14 @@ between here and that UI is the field map, which is partial —
 ## 10. Open questions
 
 1. **How much of the block is mapped, and how much of the map is right.** The
-   layout comes from static analysis. Ten axis fields have since been
-   confirmed by changing each on the stick and watching its HID descriptor and
-   idle report change as predicted ([`BLOCK-AXES.md`](BLOCK-AXES.md) §9a).
-   Buttons, LEDs and everything else still need the same treatment; most of
-   those need a hand on the stick, which the config tool's live view is for.
+   layout comes from static analysis. About thirty fields have since been
+   confirmed by changing each on the stick and watching its HID descriptor or
+   input report change as predicted: the axis records, curves and calibration
+   gains ([`BLOCK-AXES.md`](BLOCK-AXES.md) §9a), and the main button encodings,
+   tested on virtual lines held down by axis zones
+   ([`BLOCK-BUTTONS.md`](BLOCK-BUTTONS.md) §11a). Still unconfirmed: LEDs,
+   filters, the rarer button functions, and which control is wired to which
+   line — those need eyes or hands on the stick.
 2. **Does it hold for other devices and firmware?** One stick, one firmware
    version. The tool carries branches for older block sizes (`0x400`, `0x800`)
    and for a different "profile" layout used by other device families; none of

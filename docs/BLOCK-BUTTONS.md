@@ -11,10 +11,14 @@ another unit of the same model — in the sense that it reads as a sensible
 configuration. That is a consistency check, not a proof of what the firmware
 does with each field.
 
-**No button field has been exercised on hardware.** Every row in this document is
-***static***, in the sense used by [`PROTOCOL.md`](PROTOCOL.md): read out of the
-binary, not tested on a device. (The one field of the block that has been
-exercised on a device is an axis field; see [`BLOCK-AXES.md`](BLOCK-AXES.md).)
+**Several encodings here are *verified* on hardware** (§11a): the logical
+entry forms Button *N*, second button, HAT, No Function and Void; and the
+physical forms plain Button with its two shift fields, POV Switch, NoF and
+SHIFT. They were tested without anyone touching the stick, by using an axis
+divided into zones to hold virtual lines down. Every other row in this
+document is ***static***, in the sense used by [`PROTOCOL.md`](PROTOCOL.md):
+read out of the binary, not tested on a device. Which physical control is
+wired to which line has not been tested at all.
 
 Confidence is **high**, **medium** or **low**:
 
@@ -598,6 +602,49 @@ compared. Outside the axis structures they differ only at `0x330` and `0x332`,
 in an external-device record ([`BLOCK-GLOBAL.md`](BLOCK-GLOBAL.md)). **Nothing
 differs in the button tables**: the two units carry the same button
 configuration.
+
+---
+
+## 11a. Confirmed on hardware ***verified***
+
+Buttons cannot be pressed from software, but an axis can be made to press
+them. The axis-to-buttons words ([`BLOCK-AXES.md`](BLOCK-AXES.md) §6) divide an
+axis into zones, each of which holds a virtual line while the axis sits in it.
+The throttle rests in the third of four zones and the stick's X axis in the
+middle of three, which gives two lines that are permanently "pressed" with
+nobody touching the stick: line 102 (**A**) and line 111 (**B**). Their entries
+in the two tables were then changed one experiment at a time, and the stick's
+input report read. The original configuration was restored afterwards.
+
+Baseline with both lines mapped as plain buttons: buttons 102 and 111 held, hat
+centred.
+
+| Changed | Entry bytes | Report | Reading |
+|---|---|---|---|
+| Logical A: second button 50 | `E5 31` | buttons 50, 102, 111 | hi = second button − 1 |
+| Logical A: HAT 1, right | `74 01` | hat = 2; button 102 gone | hi + 1 = direction, 0 = up, clockwise in eighths |
+| Logical A: HAT 1, down | `74 03` | hat = 4 | as above |
+| Logical A: No Function | `7F FF` | button 102 gone | |
+| Logical A: Void | `7C 00` | button 102 gone | |
+| Physical A: POV Switch, right | `39 00` | hat = 2; button 102 gone | type 7, sub = direction: 0 U, 1 R, 2 D, 3 L |
+| Physical A: POV Switch, up | `38 00` | hat = 0 | as above |
+| Physical A: NoF | `7F FF` | button 102 gone | |
+| Physical A: Button with S1 → line 120; nothing shifting | `F7 FF` | button 102 | unshifted, a Button sends its own line |
+| …and B = `48 00` | | buttons 102, 111 | **sub 0 is not a shift**: B still behaves as a button |
+| …and B = `49 00` | | **button 120**; 111 gone | `0x49` is SHIFT1: it selects the line in byte 0 of a Button, and sends no button itself |
+| A: S2 → line 120; B = `4A 00` | `FF F7` | **button 120** | `0x4A` is SHIFT2: it selects the line in byte 1 |
+| A: S1 → 120; B = `4A 00` | | button 102 | SHIFT2 does not select S1 |
+| A: S2 → 120; B = `49 00` | | button 102 | SHIFT1 does not select S2 |
+| A: S1 → 120, S2 → 50; B = `4B 00` | `F7 B1` | button 50 | both shifts at once: S2 wins |
+| A: S1 → 120; B = `4D 00` | | buttons 111, 120 | bit 2 is "track as button": the shift also sends its own button |
+| A: S1 → 120 with byte 1 = `7F`; B = `49 00` | `F7 7F` | button 120 | `7F` and `FF` in a shift field both mean "none" |
+
+So bits 0–1 of a SHIFT entry are a **mask** — bit 0 SHIFT1, bit 1 SHIFT2 — not
+a shift number, and the range is `0x49`–`0x4F`, which settles the question
+left open in §2.3.
+
+What this does not show: which physical control is wired to which line. That
+still needs someone pressing buttons.
 
 ---
 

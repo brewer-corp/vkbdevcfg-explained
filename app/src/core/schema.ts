@@ -85,8 +85,9 @@ export const PHYSICAL_AXIS: FieldDef[] = [
   { key: 'inv', label: 'Sensor inverted', byte: 0, bit: 2, width: 1, kind: 'bool', conf: 'verified' },
   { key: 'acn', label: 'Auto-centre', byte: 0, bit: 0, width: 1, kind: 'bool', conf: 'static' },
   { key: 'acl', label: 'Auto-calibrate', byte: 0, bit: 1, width: 1, kind: 'bool', conf: 'static' },
-  { key: 'eq', label: 'Response curve on', byte: 3, bit: 4, width: 1, kind: 'bool', conf: 'static' },
-  { key: 'mpl', label: 'Multiplier', byte: 1, bit: 0, width: 4, kind: 'uint', min: 1, max: 15, conf: 'static' },
+  { key: 'eq', label: 'Response curve on', byte: 3, bit: 4, width: 1, kind: 'bool', conf: 'verified' },
+  { key: 'mpl', label: 'Multiplier', byte: 1, bit: 0, width: 4, kind: 'uint', min: 1, max: 15, conf: 'verified',
+    hint: 'Each step doubles the deflection from centre' },
 ];
 
 /** Sensor type of a physical axis: three bits scattered over the record. */
@@ -133,7 +134,10 @@ export function physicalFunction(block: Uint8Array, line: number): PhysicalFn {
   else if (type === 11) kind = sub === 4 ? 'ButAlt / Radio' : sub === 5 ? 'Rotary switch' : sub === 6 ? 'Dependent button' : 'Toggle';
   else if (type === 14) kind = sub === 0 ? 'SubSHIFT' : 'ButtonS / ButtonM';
   else if (type === 15) kind = 'No function';
-  else if (type === 9) detail = `shift ${(sub & 3) + 1}`;
+  else if (type === 9) {                       // bits 0-1 are a mask (confirmed on hardware), bit 2 = also send a button
+    if (!(sub & 3)) kind = 'SHIFT (none selected)';
+    detail = [sub & 1 && 'SHIFT1', sub & 2 && 'SHIFT2', sub & 4 && 'also a button'].filter(Boolean).join(' + ');
+  }
   else if (type === 12) detail = `mode ${sub}`;
   return { kind, detail, plain: false, wide: type === 4 || type === 12 };
 }

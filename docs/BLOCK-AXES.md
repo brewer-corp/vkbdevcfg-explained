@@ -16,10 +16,11 @@ Two labels are used, as in [`PROTOCOL.md`](PROTOCOL.md):
 - ***verified*** — exercised on the test device.
 - ***static*** — read out of the binary, not exercised on hardware.
 
-**Ten fields are *verified*** — their effect was observed on the test stick, one
-experiment each, recorded in §9a: the logical-axis fields En, Vs, In, Cn,
-AxisID, HID usage, Precision, Dz Lo and Dz Hi, and the physical-axis inversion
-bit R. **Every other row is *static*.**
+**About twenty fields are *verified*** — their effect was observed on the test
+stick, one experiment each, recorded in §9a: the logical-axis fields En, Vs,
+In, Cn, AxisID, HID usage, Precision, Dz Lo and Dz Hi; the physical-axis
+fields R, Eq, MPL, KdHi and Bias; the curve points and the curve number; Anti
+DZ; and the axis-to-buttons word. **Every other row is *static*.**
 
 Confidence is **high**, **medium** or **low**:
 
@@ -560,6 +561,23 @@ idle report reads Z = 1194.
 | Logical byte 4, **Dz Hi** | 3.0 → 25.5 % | Z = 1246 | deflection from centre grew ×1.31; (1 − 0.03) / (1 − 0.255) = 1.30 |
 | Logical slot 6, **En** and **Vs** | 0 → 1 | descriptor axis 6 becomes usage `0x36`; value 2048 | a disabled axis appears, as Slider |
 | Logical byte 6 bit 7, **Mode** | 0 → 1 | Z = 1230 | *something* changed; this does not show it is "relative mode". Still ***static*** |
+
+A second batch used the same method on the sensor side and the curves.
+
+| Field | Change | Observed | Reading |
+|---|---|---|---|
+| Physical byte 3 bit 4, **Eq**, with curve 3 left as identity | 0 → 1 | Z = 1194, unchanged | control: an identity curve does nothing |
+| **Eq** on, curve 3 set to `40` × 10 | | Z = 581 | about half of 1194: output = input × value / 128, applied to the whole value, not to deflection from centre |
+| **Eq** on, curve 3 set to `C0` × 10 | | Z = 1807 | about 1.5 × 1194 |
+| Curve 3 set to `40` × 10, **Eq** off | | Z = 1194, unchanged | the Eq bit gates the curve |
+| **Curve number** (`0x69A + 2n`, byte 0) for slot 3 | 0 → 5, Eq on | Z = 878 | curve index 4, the stored S-curve: interpolating its points at 58 % of travel gives a gain of about 0.74, and 0.74 × 1194 = 890 |
+| **Anti DZ** (`0x69A + 2n`, byte 1) for slot 3 | 0 → 25.5 % | Z = 1411 | pushed away from centre |
+| Physical byte 1 bits 0–3, **MPL** | 8 → 9 | Z = 1365 | deflection from centre 170 → 341: doubled |
+| **MPL** | 8 → 7 | Z = 1109 | deflection 170 → 85: halved |
+| Physical byte 4, **KdHi** | `97` → `60` | Z = 1132 | deflection × 0.635; `0x60 / 0x97` = 0.636. A gain for the upper half |
+| Physical byte 5, **KdLo** | `92` → `60` | Z = 1194, unchanged | consistent with a gain for the lower half; the throttle rests above centre |
+| Physical bytes 6–7, **Bias** | 0 → +200 | Z = 2047, saturated | a zero-point offset with a large effect; sign and scale not measured |
+| **Axis-to-buttons** word for slot 3 (§6): type Zones, 4 zones, first virtual button 100; lines 100–103 mapped to buttons 100–103 | | **button 102 is held** at rest | 58 % of travel is the third of four zones. Confirms the word's three fields, and the logical button entry encoding ([`BLOCK-BUTTONS.md`](BLOCK-BUTTONS.md) §4) |
 
 The filter grade (§3.2) was written and read back earlier, but its *effect* has
 never been observed. By the standard used in this table it is not confirmed.
