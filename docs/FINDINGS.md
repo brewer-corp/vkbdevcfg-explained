@@ -374,5 +374,8 @@ unused on this stick. After the last step the configuration hashed identically
 to the backup taken before step 1, and the stick enumerated and reported input
 normally.
 
-No firmware was flashed. No short command was sent: nothing reset the stick,
-restored defaults, started a calibration or entered the bootloader.
+No firmware was flashed. Two benign short commands were sent later, while
+probing the `RAM` target — `0x17` (select profile 0) and `0x14` (partial-write
+mask) — along with five more writes to that target, none of which changed
+anything. Nothing reset the stick, restored defaults, started a calibration or
+entered the bootloader, and the configuration still matches the original backup.

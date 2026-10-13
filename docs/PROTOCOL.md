@@ -109,8 +109,9 @@ argument. Once a block has been read, the tool sends short commands in an
 `A5 5A code_lo code_hi`, sent in the clear — as the key (`0x00412354`).
 
 Short commands are what reset the stick to factory defaults, start a
-calibration and enter the bootloader. **None was sent during this work, and
-none is needed to read or write the configuration.** The catalogue is in
+calibration and enter the bootloader. **None is needed to read or write the
+configuration.** Only two benign ones were ever sent, while investigating the
+`RAM` target (§5). The catalogue is in
 [`COMMANDS.md`](COMMANDS.md).
 
 ### LED command *(public, not re-tested here)*
@@ -237,9 +238,16 @@ Things worth knowing:
   the correct CRC. A host does not need to compute it.
 - **No short command is required.** VKBDevCfg sends "select profile"
   (`0x17`) before a write; the device accepted writes without it.
-- **Command `0x25`, the `RAM` target, does not apply anything.** The device
-  acknowledged it with `block written` and restarted, but neither copy changed,
-  before or after the restart. Use `0x24`.
+- **Command `0x25`, the `RAM` target, does not visibly apply anything.** The
+  device acknowledged it with `block written` and restarted, but neither copy
+  changed, before or after the restart. Use `0x24`. The same happened with
+  short command `0x17` sent first (plain and encoded), with an 8-byte write at
+  an offset (two keystream alignments), and with short command `0x14` sent
+  first. So `block written` only confirms the transfer, and any write to this
+  target is followed by a restart, however small.
+- **Two short commands have now been sent.** `0x17` with argument 0 ("select
+  profile") produces no restart, no change and no acknowledgement. `0x14` with
+  argument 1 ("partial-write mask") is acknowledged with `5A A5 FE 00`.
 - **The device does not reject a block it already holds.** An identical write
   returns `block written`, not `no new data`, and still triggers a restart.
 
