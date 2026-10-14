@@ -1,0 +1,24 @@
+import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
+import { useState } from 'react';
+import { blockCrcOk, firmwareText, typeId } from '../core/block';
+import { AXIS_SLOTS, HID_USAGES, LED_EVENT_MAX, LINES, LOGICAL_AXIS, extDevice, ledEvent, logicalAxisBase, logicalFunction, readField } from '../core/schema';
+import { forgetUnchecked } from '../session';
+import { stickModel } from '../core/identity';
+import { extRegisters } from '../core/wiring';
+export function Overview({ session, ed, go, changed }) {
+    const b = ed.block;
+    const f = (k) => LOGICAL_AXIS.find((d) => d.key === k);
+    const axes = [...Array(AXIS_SLOTS).keys()].filter((n) => readField(b, logicalAxisBase(n), f('en')))
+        .map((n) => HID_USAGES[readField(b, logicalAxisBase(n), f('usage'))]);
+    const buttons = [...Array(LINES).keys()].filter((l) => { const f = logicalFunction(b, l); return f.button !== null && !f.auto; }).length;
+    const leds = [...Array(LED_EVENT_MAX).keys()].filter((i) => !ledEvent(b, i).empty).length;
+    const ext = [...Array(8).keys()].map((i) => extDevice(b, i)).filter((d) => d.type !== 0);
+    const [late, setLate] = useState(session.late);
+    const model = stickModel(b, session.productId);
+    return (_jsxs(_Fragment, { children: [late && (_jsx("div", { className: `note ${late.ok ? 'ok' : 'warn'}`, children: late.ok
+                    ? _jsxs(_Fragment, { children: [_jsx("b", { children: "The earlier write lasted." }), " A configuration written at ", late.writtenAt.toLocaleTimeString(), " was never read back at the time. This stick holds it."] })
+                    : _jsxs(_Fragment, { children: [_jsx("b", { children: "An earlier write is unaccounted for." }), " A configuration written at ", late.writtenAt.toLocaleTimeString(), " was never read back, and this stick does not hold it. If this is a different stick, connect the one you wrote to. Otherwise the write did not last.", _jsx("div", { className: "row", children: _jsx("button", { className: "btn", onClick: () => { forgetUnchecked(); setLate(undefined); }, children: "Dismiss" }) })] }) })), _jsxs("div", { className: "stats", children: [_jsx(Stat, { k: "Model type", v: `0x${typeId(b).toString(16)}` }), session.productId !== undefined && _jsx(Stat, { k: "USB ID", v: `231d:${session.productId.toString(16).padStart(4, '0')}` }), _jsx(Stat, { k: "Firmware", v: firmwareText(b) }), _jsx(Stat, { k: "Checksum", v: blockCrcOk(ed.original) ? 'OK' : 'BAD', bad: !blockCrcOk(ed.original) }), _jsx(Stat, { k: "Axes in use", v: String(axes.length) }), _jsx(Stat, { k: "Buttons mapped", v: String(buttons) }), _jsx(Stat, { k: "LED events", v: String(leds) })] }), _jsxs("section", { className: "panel", children: [_jsx("h2", { children: "What this stick is set up to do" }), model.hand && _jsxs("p", { children: [_jsx("b", { children: "Stick:" }), " ", model.hand, "-handed", model.mount === 'omni' ? ', on an Omni Throttle adapter' : model.mount === 'standard' ? ', standard mount' : ''] }), _jsxs("p", { children: [_jsx("b", { children: "Axes:" }), " ", axes.join(' · ') || 'none enabled'] }), _jsxs("p", { children: [_jsx("b", { children: "Attached:" }), " ", ext.length ? ext.map((d) => { const r = extRegisters(b, d.index); return `${d.name} (lines ${8 * (r.first - 1) + 1}–${8 * (r.first - 1 + r.count)}, ${d.leds} LEDs)`; }).join(' · ') : 'no grip or module records'] }), _jsxs("p", { children: [_jsx("b", { children: "Source:" }), " ", session.source === 'device' ? 'read from the stick over USB' : session.source === 'demo' ? 'a simulated stick' : `the file ${session.name}`] })] }), _jsxs("section", { className: "panel", children: [_jsx("h2", { children: "How editing works here" }), _jsxs("ol", { children: [_jsx("li", { children: "Change settings on the other tabs. Nothing is sent while you edit." }), _jsxs("li", { children: [_jsx("b", { children: "Review & apply" }), " shows exactly which bytes will change, saves a backup, and writes once."] }), _jsx("li", { children: "The stick restarts for about three seconds, then the tool reads it back to check." })] }), _jsxs("p", { className: "dim", children: ["Most settings here have been changed on a real stick and their effect seen. The few marked", _jsx("em", { className: "pill unsure", children: "unverified" }), " come only from reading the vendor tool\u2019s code, and are locked unless you turn on ", _jsx("b", { children: " Experimental fields" }), ". The stick does not check what it is given \u2014 this tool is the only guard."] }), changed > 0 && _jsxs("button", { className: "btn", onClick: go, children: ["Review ", changed, " changed byte", changed > 1 ? 's' : ''] })] })] }));
+}
+function Stat({ k, v, bad }) {
+    return _jsxs("div", { className: `stat ${bad ? 'bad' : ''}`, children: [_jsx("div", { className: "v", children: v }), _jsx("div", { className: "k", children: k })] });
+}

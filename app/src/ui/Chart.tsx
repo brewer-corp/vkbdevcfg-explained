@@ -210,7 +210,9 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
             </select></label>
         )}
         {role === 'other' && !mini && <p className="dim">{p.kind}{p.detail ? `: ${p.detail}` : ''}. This kind of control is edited under the hood for now.</p>}
-        {mini?.startsWith('toggle') && <p className="dim">Pressing the mini-stick in switches it between the two. To use the press for something else, pick one of the “always” choices.</p>}
+        {mini && layer === 0 && <p className="dim">{mini.startsWith('toggle')
+          ? 'Pressing the mini-stick in switches it between a hat and two axes. To use the press for something else, pick one of the “always” choices.'
+          : 'Pressing the mini-stick in is an ordinary button.'}</p>}
         {role !== 'button' && role !== 'other' && (
           <p className="dim">While it is held, every button can send something else: switch to the “{LAYERS[role === 'shift1' ? 1 : 2]}” layer above to set that up. It sends nothing itself.</p>
         )}

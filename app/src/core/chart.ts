@@ -193,10 +193,10 @@ const USTICK = 0x2e;                              // the job "this press switche
 export type MiniStick = 'toggle-hat' | 'toggle-axes' | 'hat' | 'axes';
 
 export const MINI_STICK: Record<MiniStick, string> = {
-  'toggle-hat': 'hat or axes — the click switches (starts as a hat)',
-  'toggle-axes': 'hat or axes — the click switches (starts as axes)',
-  hat: 'always a hat — the click is a button',
-  axes: 'always two axes — the click is a button',
+  'toggle-hat': 'switchable, starts as a hat',
+  'toggle-axes': 'switchable, starts as axes',
+  hat: 'always a hat',
+  axes: 'always two axes',
 };
 
 const parked = (block: Uint8Array, wired: (line: number) => boolean) =>
