@@ -41,9 +41,10 @@ change it. There is a row for each axis too, with its live value, deadzones and 
 
 The chart exists for a Gladiator EVO with an SCG grip. Other hardware gets the tables.
 
-The drawing (`src/ui/StickArt.tsx`) is this project's own line art, traced loosely over product
-photographs for proportion. It is drawn once, as a left-hand stick on an Omni adapter; the
-standard stick stands the same grip upright, and the right-hand stick is the mirror image.
+The drawings (`src/ui/StickArt.tsx`) are outlines traced by program from two product photographs,
+an upright right-hand stick and a left-hand one on an Omni adapter, with the controls and a few
+edges added at positions measured on the same photographs. The photographs are not in the
+repository; the outlines are in `stickart.paths.ts`. The other two sticks are mirror images.
 
 **After a write the browser asks for the stick again.** A write restarts the stick, which to the
 browser is an unplug. Chrome keeps a site's permission across an unplug only for devices that

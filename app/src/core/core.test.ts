@@ -11,7 +11,7 @@ import { extRegisters, wiring } from './wiring';
 import { Session, applyToStick, backupName, checkStick, noteUnchecked, settleUnchecked } from '../session';
 import { foreignSigns, stickModel } from './identity';
 import { SCG_CHART, chartFits, freeLine, lineOf, roleOf, rowSends, setLayered, setRole, shiftsInUse } from './chart';
-import { ART, spot } from '../ui/StickArt';
+import { artSize, spot } from '../ui/StickArt';
 
 const text = (s: string) => new TextEncoder().encode(s);
 
@@ -437,9 +437,9 @@ describe('the chart', () => {
     for (const g of [...SCG_CHART.inner, ...SCG_CHART.outer])
       for (const hand of ['left', 'right'] as const)
         for (const mount of ['standard', 'omni'] as const) {
-          const [x, y] = spot(g.id, hand, mount);
-          expect(x > 0 && x < ART.w && y > 0 && y < ART.h, `${g.id} ${hand} ${mount}: ${x},${y}`).toBe(true);
-          expect(spot(g.id, hand === 'left' ? 'right' : 'left', mount)[0]).toBeCloseTo(ART.w - x);
+          const [x, y] = spot(g.id, hand, mount), art = artSize(mount);
+          expect(x > 0 && x < art.w && y > 0 && y < art.h, `${g.id} ${hand} ${mount}: ${x},${y}`).toBe(true);
+          expect(spot(g.id, hand === 'left' ? 'right' : 'left', mount)[0]).toBeCloseTo(art.w - x);
         }
   });
 });

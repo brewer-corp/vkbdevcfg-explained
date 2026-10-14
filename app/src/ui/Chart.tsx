@@ -7,11 +7,12 @@ import type { Session } from '../session';
 import { Curve } from './Axes';
 import { Field } from './Field';
 import type { LiveState } from './Live';
-import { Hand, Mount, StickArt, spot } from './StickArt';
+import { Hand, Mount, StickArt, artSize, spot } from './StickArt';
 
 // Everything is laid out in one coordinate system so the picture, the boxes and the lines between them scale together.
 const VIEW = { w: 1280, h: 792 };
-const DRAW = { x: 392, y: 4, s: 0.55 };
+/** The box the drawing is fitted into. */
+const DRAW = { x: 384, y: 6, w: 512, h: 650 };
 const COL = { left: 16, right: 912, w: 352, title: 24, row: 22, gap: 8, top: 6 };
 
 type Selection = { kind: 'row'; key: string } | { kind: 'axis'; slot: number } | null;
@@ -31,18 +32,28 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
   const hand: Hand = look?.includes('left') ? 'left' : look?.includes('right') ? 'right' : model.hand ?? 'right';
   const mount: Mount = look?.includes('omni') ? 'omni' : look?.includes('standard') ? 'standard' : model.mount ?? 'standard';
 
-  const at = (id: string): [number, number] => { const [x, y] = spot(id, hand, mount); return [DRAW.x + DRAW.s * x, DRAW.y + DRAW.s * y]; };
+  const art = artSize(mount), scale = Math.min(DRAW.w / art.w, DRAW.h / art.h);
+  const origin = [DRAW.x + (DRAW.w - art.w * scale) / 2, DRAW.y + (DRAW.h - art.h * scale) / 2];
+  const at = (id: string): [number, number] => { const [x, y] = spot(id, hand, mount); return [origin[0] + scale * x, origin[1] + scale * y]; };
   const placed = useMemo(() => {
+    // Each box goes on the side of the picture its control is on, and boxes run top to bottom in the order their
+    // controls do, so the lines between them cross as little as possible.
+    const height = (rows: number) => COL.title + rows * COL.row + COL.gap;
+    const middle = origin[0] + (art.w * scale) / 2, room = VIEW.h - COL.top;
+    const all = [...SCG_CHART.inner, ...SCG_CHART.outer].map((group) => ({ group, hot: at(group.id), h: height(group.rows.length) }));
+    const cols = { left: all.filter((g) => g.hot[0] < middle), right: all.filter((g) => g.hot[0] >= middle) };
+    const tall = (side: 'left' | 'right') => cols[side].reduce((n, g) => n + g.h, 0);
+    for (const [from, to] of [['left', 'right'], ['right', 'left']] as const)
+      while (tall(from) > room && cols[from].length > 1) {                    // too many on one side: hand over the most central
+        const g = cols[from].reduce((a, b) => (Math.abs(a.hot[0] - middle) < Math.abs(b.hot[0] - middle) ? a : b));
+        cols[from] = cols[from].filter((x) => x !== g); cols[to].push(g);
+      }
     const out: Placed[] = [];
-    const column = (groups: GroupDef[], side: 'left' | 'right') => {
-      let y = COL.top;
-      for (const group of groups) { out.push({ group, side, y, hot: at(group.id) }); y += COL.title + group.rows.length * COL.row + COL.gap; }
-      return y;
-    };
-    // the reference charts put the hats on the side of the hand that uses them
-    column(SCG_CHART.inner, hand === 'left' ? 'left' : 'right');
-    const axesY = column(SCG_CHART.outer, hand === 'left' ? 'right' : 'left');
-    return { groups: out, axesY, axesSide: (hand === 'left' ? 'right' : 'left') as 'left' | 'right' };
+    const ends = { left: COL.top, right: COL.top };
+    for (const side of ['left', 'right'] as const)
+      for (const g of cols[side].sort((a, b) => a.hot[1] - b.hot[1])) { out.push({ group: g.group, side, y: ends[side], hot: g.hot }); ends[side] += g.h; }
+    const axesSide: 'left' | 'right' = ends.left <= ends.right ? 'left' : 'right';
+    return { groups: out, axesY: ends[axesSide], axesSide };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hand, mount]);
 
@@ -87,7 +98,7 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
       </div>
       <div className="chart">
         <svg viewBox={`0 0 ${VIEW.w} ${VIEW.h}`} role="img" aria-label="The stick and what each of its controls sends">
-          <g transform={`translate(${DRAW.x} ${DRAW.y}) scale(${DRAW.s})`}>
+          <g transform={`translate(${origin[0]} ${origin[1]}) scale(${scale})`}>
             <StickArt hand={hand} mount={mount} />
           </g>
           {/* leader lines run over the drawing, as on a paper chart */}
@@ -98,7 +109,7 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
           })}
           {placed.groups.map(({ group, hot }) => {
             const lit = group.rows.some((r) => live?.lines.has(line(r.key) ?? -1));
-            return <circle key={group.id} className={`spot ${lit ? 'live' : ''} ${hover === group.id || picked?.group.id === group.id ? 'on' : ''}`} cx={hot[0]} cy={hot[1]} r={9}
+            return <circle key={group.id} className={`spot ${lit ? 'live' : ''} ${hover === group.id || picked?.group.id === group.id ? 'on' : ''}`} cx={hot[0]} cy={hot[1]} r={6}
               onMouseEnter={() => setHover(group.id)} onMouseLeave={() => setHover(null)} onClick={() => setSel({ kind: 'row', key: group.rows[0].key })} />;
           })}
           {placed.groups.map(({ group, side, y }) => (

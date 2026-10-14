@@ -1,38 +1,34 @@
-// A line drawing of a Gladiator EVO with an SCG grip. Our own artwork: traced loosely over product photographs for
-// proportion, as a left-hand stick on an Omni Throttle adapter. The other three variants come from that one drawing:
-// a standard stick stands the same grip upright on the shaft, and a right-hand stick is the mirror image.
+// The stick, drawn. Each of the two drawings is an outline traced from a product photograph (see stickart.paths.ts)
+// with the controls and a few edges added by hand at positions measured on the same photograph. A right-hand Omni
+// stick and a left-hand standard one are the mirror images of the two that were traced.
 import type { ReactNode } from 'react';
+import { OMNI, STANDARD } from './stickart.paths';
 
 export type Hand = 'left' | 'right';
 export type Mount = 'standard' | 'omni';
 
-export const ART = { w: 900, h: 1100 };
-
-/** Where the grip meets what carries it, in the drawing as traced (Omni, left hand). */
-const JOINT: [number, number] = [330, 440];
-/** The standard pose: turn the grip upright about that joint, then set the joint on top of the shaft. */
-const UPRIGHT = { turn: -62, at: [432, 600] as [number, number] };
-
-/** Where each control sits, in the traced pose. `grip` parts move with the grip. */
-const SPOTS: Record<string, { at: [number, number]; grip: boolean }> = {
-  a4: { at: [640, 128], grip: true }, a3: { at: [580, 230], grip: true }, a1: { at: [652, 256], grip: true },
-  a2: { at: [598, 320], grip: true }, b1: { at: [752, 152], grip: true }, c1: { at: [445, 375], grip: true },
-  d1: { at: [505, 418], grip: true }, trigger: { at: [702, 398], grip: true }, rapid: { at: [758, 374], grip: true },
-  f: { at: [232, 737], grip: false }, sw1: { at: [112, 812], grip: false }, en: { at: [205, 872], grip: false },
-  throttle: { at: [158, 838], grip: false }, stick: { at: [432, 668], grip: false },
+/** Where each control is, in its drawing's own coordinates. */
+const SPOTS: Record<Mount, Record<string, [number, number]>> = {
+  standard: {
+    a1: [262, 48], a4: [305, 55], a3: [276, 88], a2: [247, 91], b1: [384, 98], rapid: [338, 146], trigger: [359, 131],
+    c1: [213, 172], d1: [224, 198], f: [145, 404], sw1: [78, 450], throttle: [108, 466], en: [143, 478], stick: [240, 372],
+  },
+  omni: {
+    a4: [872, 186], a3: [805, 312], a1: [885, 348], a2: [810, 435], b1: [1008, 198], rapid: [1017, 508], trigger: [949, 510],
+    c1: [605, 520], d1: [612, 584], f: [314, 1000], sw1: [164, 1083], throttle: [224, 1135], en: [288, 1192], stick: [590, 925],
+  },
+};
+const DRAWN: Record<Mount, { w: number; h: number; hand: Hand }> = {
+  standard: { w: STANDARD.w, h: STANDARD.h, hand: 'right' },
+  omni: { w: OMNI.w, h: OMNI.h, hand: 'left' },
 };
 
-const rad = (deg: number) => (deg * Math.PI) / 180;
+export const artSize = (mount: Mount) => ({ w: DRAWN[mount].w, h: DRAWN[mount].h });
 
-/** Position of a control in the drawing's own coordinates, for the given variant. */
+/** Position of a control in the drawing's coordinates, for the given variant. */
 export function spot(id: string, hand: Hand, mount: Mount): [number, number] {
-  const s = SPOTS[id];
-  let [x, y] = s.at;
-  if (s.grip && mount === 'standard') {
-    const dx = x - JOINT[0], dy = y - JOINT[1], c = Math.cos(rad(UPRIGHT.turn)), sn = Math.sin(rad(UPRIGHT.turn));
-    x = UPRIGHT.at[0] + dx * c - dy * sn; y = UPRIGHT.at[1] + dx * sn + dy * c;
-  }
-  return [hand === 'right' ? ART.w - x : x, y];
+  const [x, y] = SPOTS[mount][id];
+  return [hand === DRAWN[mount].hand ? x : DRAWN[mount].w - x, y];
 }
 
 /** A closed curve through the given points (Catmull-Rom, as cubic Béziers). */
@@ -46,88 +42,95 @@ function smooth(points: number[][]): string {
   return d + 'Z';
 }
 
-const GRIP = smooth([[232, 400], [226, 345], [258, 296], [300, 272], [345, 288], [410, 262], [490, 215], [560, 198], [598, 160], [612, 100],
-  [648, 72], [702, 78], [748, 118], [788, 196], [806, 278], [792, 338], [745, 372], [690, 380], [628, 366], [585, 352], [520, 352], [480, 372],
-  [470, 420], [430, 446], [330, 458], [258, 440]]);
-const FACE = smooth([[608, 112], [650, 90], [700, 98], [738, 142], [766, 212], [768, 288], [736, 338], [682, 354], [622, 344], [588, 300], [562, 246], [584, 172]]);
-const REST = smooth([[236, 396], [232, 348], [260, 302], [300, 280], [322, 304], [288, 334], [270, 392]]);
-
-function Hat({ id, r, kind }: { id: string; r: number; kind: 'knurl' | 'castle' | 'stick' | 'thumb' }) {
-  const [x, y] = SPOTS[id].at;
+// Small parts, sized by `u`: one unit is a pixel of the standard drawing, so both drawings share the same shapes.
+function Hat({ at, u, kind, rx = 13, ry = 13, turn = 0 }: { at: [number, number]; u: number; kind: 'knurl' | 'castle' | 'thumb'; rx?: number; ry?: number; turn?: number }) {
+  const [x, y] = at;
   return (
-    <g className={`part hat ${kind}`}>
-      <circle cx={x} cy={y} r={r} />
-      {kind === 'castle' && <path d={`M${x - r * 0.62},${y} H${x + r * 0.62} M${x},${y - r * 0.62} V${y + r * 0.62}`} />}
-      {kind !== 'castle' && <circle cx={x} cy={y} r={r * 0.55} className="inner" />}
-      {kind === 'thumb' && [...Array(5).keys()].map((i) => <path key={i} d={`M${x - r * 0.7 + i * r * 0.35},${y - r * 0.6} v${r * 1.2}`} className="ridge" />)}
+    <g className={`part hat ${kind}`} transform={`rotate(${turn} ${x} ${y})`}>
+      <ellipse cx={x} cy={y} rx={rx * u} ry={ry * u} />
+      {kind === 'castle'
+        ? <path d={`M${x - rx * u * 0.55},${y} H${x + rx * u * 0.55} M${x},${y - ry * u * 0.55} V${y + ry * u * 0.55}`} />
+        : [-0.5, 0, 0.5].map((o) => <path key={o} className="ridge" d={`M${x - rx * u * 0.75},${y + o * ry * u} H${x + rx * u * 0.75}`} />)}
     </g>
   );
 }
-
-function Grip() {
+function Wheel({ at, u, rx, ry, turn }: { at: [number, number]; u: number; rx: number; ry: number; turn: number }) {
+  const [x, y] = at;
   return (
-    <g className="grip">
-      {/* triggers hang below the head, behind it */}
-      <path className="part" d="M664,372 q30,62 74,30 l10,-34 z" />
-      <path className="part" d="M742,370 q26,-4 34,-26 l10,22 q-10,28 -40,26 z" />
-      <path className="body" d={GRIP} />
-      <path className="detail" d={FACE} />
-      <path className="detail" d={REST} />
-      {[0, 1, 2, 3, 4].map((i) => <path key={i} className="ridge" d={`M${246 + i * 12},${352 - i * 9} l22,34`} />)}
-      <path className="detail" d="M470,300 q70,-40 120,-52" />
-      <Hat id="a4" r={27} kind="knurl" />
-      <Hat id="a3" r={28} kind="castle" />
-      <Hat id="a1" r={27} kind="stick" />
-      <Hat id="c1" r={31} kind="thumb" />
-      <circle className="part red" cx={SPOTS.a2.at[0]} cy={SPOTS.a2.at[1]} r={21} />
-      <rect className="part" x={SPOTS.b1.at[0] - 8} y={SPOTS.b1.at[1] - 22} width={16} height={44} rx={7} transform={`rotate(24 ${SPOTS.b1.at[0]} ${SPOTS.b1.at[1]})`} />
-      <rect className="part" x={SPOTS.d1.at[0] - 20} y={SPOTS.d1.at[1] - 9} width={40} height={18} rx={8} transform={`rotate(-8 ${SPOTS.d1.at[0]} ${SPOTS.d1.at[1]})`} />
+    <g className="part" transform={`rotate(${turn} ${x} ${y})`}>
+      <ellipse cx={x} cy={y} rx={rx * u} ry={ry * u} />
+      {[-0.6, -0.3, 0, 0.3, 0.6].map((o) => <path key={o} className="ridge" d={`M${x - rx * u * 0.85},${y + o * ry * u} h${rx * u * 1.7}`} />)}
     </g>
   );
 }
+const Btn = ({ at, u, w, h, turn, r = 3 }: { at: number[]; u: number; w: number; h: number; turn: number; r?: number }) =>
+  <rect className="part" x={at[0] - (w * u) / 2} y={at[1] - (h * u) / 2} width={w * u} height={h * u} rx={r * u} transform={`rotate(${turn} ${at[0]} ${at[1]})`} />;
 
-function Base({ shaftTop }: { shaftTop: number }) {
-  const wheel = (id: string) => {
-    const [x, y] = SPOTS[id].at;
-    return (
-      <g className="part" transform={`rotate(-22 ${x} ${y})`}>
-        <ellipse cx={x} cy={y} rx={15} ry={40} />
-        {[-24, -12, 0, 12, 24].map((o) => <path key={o} className="ridge" d={`M${x - 13},${y + o} h26`} />)}
-      </g>
-    );
-  };
+function Standard() {
+  const s = SPOTS.standard, u = 1;
   return (
-    <g className="base">
-      <path className="plate" d="M40,850 L250,1040 L845,870 L640,720 Z" />
-      {[[66, 858], [246, 1016], [806, 874]].map(([x, y]) => <circle key={x} className="hole" cx={x} cy={y} r={7} />)}
-      <path className="body" d="M95,788 L160,702 L300,660 L540,640 L610,655 L640,770 L665,940 L330,1020 L95,862 Z" />
-      <path className="detail" d="M160,702 L330,792 L640,770 M330,792 V1020" />
-      <path className="detail" d="M440,838 L612,818 L616,852 L444,874 Z" />
-      {[...Array(9).keys()].map((i) => <path key={i} className="ridge" d={`M${452 + i * 19},${898 - i * 2.4} v52`} />)}
-      {[[187, 712], [232, 737], [277, 770]].map(([x, y]) => <rect key={x} className="part" x={x - 18} y={y - 11} width={36} height={22} rx={4} transform={`rotate(27 ${x} ${y})`} />)}
-      {wheel('sw1')}{wheel('throttle')}{wheel('en')}
-      <ellipse className="detail" cx={432} cy={694} rx={66} ry={27} />
-      <rect className="shaft" x={413} y={shaftTop} width={38} height={694 - shaftTop} />
-    </g>
+    <>
+      <path className="body" d={STANDARD.body} />
+      {/* base: the deck the buttons sit on, the front corner, the name plate and its vents */}
+      <path className="edge" d="M97,402 L216,443 L352,404 M216,443 L212,548 M97,402 Q104,384 128,376" />
+      <path className="edge" d="M270,456 L346,430 L348,443 L272,469 Z" />
+      {[...Array(10).keys()].map((i) => <path key={i} className="ridge" d={`M${277 + i * 7.6},${482 - i * 2.6} v25`} />)}
+      {[[113, 392], [145, 404], [176, 424]].map((p) => <Btn key={p[0]} at={p} u={u} w={22} h={13} turn={18} />)}
+      <Wheel at={s.sw1} u={u} rx={8} ry={19} turn={-16} />
+      <Wheel at={s.throttle} u={u} rx={11} ry={24} turn={-14} />
+      <Wheel at={s.en} u={u} rx={10} ry={22} turn={-14} />
+      {/* grip: hand rest and clamp, the seam down its side, the recess the hats sit in */}
+      <path className="edge" d="M205,206 Q199,270 196,330" />
+      <path className="part rest" d={smooth([[236, 311], [262, 298], [292, 300], [297, 311], [274, 324], [242, 327]])} />
+      <path className="edge" d="M254,330 L308,320 L312,340 L264,352 Z" />
+      <path className="edge" d={smooth([[241, 40], [268, 23], [302, 18], [330, 30], [339, 62], [326, 96], [300, 113], [262, 119], [241, 106], [237, 70]])} />
+      <Btn at={[359, 131]} u={u} w={18} h={28} turn={4} />
+      {STANDARD.reds.map((d) => <path key={d.length} className="part red" d={d} />)}
+      <Hat at={s.a1} u={u} kind="knurl" rx={12} ry={15} turn={-22} />
+      <Hat at={s.a4} u={u} kind="knurl" rx={11} ry={14} turn={14} />
+      <Hat at={s.a3} u={u} kind="castle" rx={13} ry={13} />
+      <Btn at={s.b1} u={u} w={9} h={22} turn={8} r={4} />
+      <Hat at={s.c1} u={u} kind="thumb" rx={9} ry={9} />
+      <Btn at={s.d1} u={u} w={8} h={14} turn={10} r={4} />
+    </>
   );
 }
 
-/** The drawing, inside a `<g>` in its own 900 × 1100 coordinates. `children` are drawn on top, unmirrored. */
+function Omni() {
+  const s = SPOTS.omni, u = 2.7;
+  return (
+    <>
+      <path className="body" d={OMNI.body} />
+      <path className="edge" d="M192,987 L442,1115 L897,1038 M442,1115 L449,1397 M192,987 Q210,950 262,932" />
+      <path className="edge" d="M600,1160 L833,1122 L836,1160 L603,1199 Z" />
+      {[...Array(10).keys()].map((i) => <path key={i} className="ridge" d={`M${617 + i * 23.5},${1228 - i * 4.4} v72`} />)}
+      {[[263, 970], [314, 1000], [369, 1045]].map((p) => <Btn key={p[0]} at={p} u={u} w={21} h={12.5} turn={26} />)}
+      <Wheel at={s.sw1} u={u} rx={7.5} ry={18} turn={-24} />
+      <Wheel at={s.throttle} u={u} rx={10} ry={21} turn={-22} />
+      <Wheel at={s.en} u={u} rx={9} ry={20} turn={-22} />
+      <path className="part rest" d={smooth([[362, 372], [412, 366], [462, 386], [452, 440], [404, 446], [372, 420]])} />
+      <path className="edge" d="M470,470 Q610,395 770,352" />
+      <path className="edge" d={smooth([[833, 126], [896, 102], [948, 132], [978, 206], [988, 300], [972, 386], [922, 440], [846, 478], [790, 440], [768, 340], [796, 236]])} />
+      <Btn at={[949, 512]} u={u} w={20} h={12} turn={-8} />
+      <Btn at={[1017, 510]} u={u} w={14} h={10} turn={-14} />
+      {OMNI.reds.map((d) => <path key={d.length} className="part red" d={d} />)}
+      <Hat at={s.a4} u={u} kind="knurl" rx={11} ry={14} turn={-18} />
+      <Hat at={s.a3} u={u} kind="castle" rx={13} ry={13} />
+      <Hat at={s.a1} u={u} kind="knurl" rx={12} ry={12} />
+      <Btn at={s.b1} u={u} w={8} h={20} turn={24} r={4} />
+      <Hat at={s.c1} u={u} kind="thumb" rx={14} ry={14} />
+      <Btn at={s.d1} u={u} w={12} h={7} turn={-6} r={3} />
+    </>
+  );
+}
+
+/** The drawing, in its own coordinates (see `artSize`). `children` are drawn on top, unmirrored. */
 export function StickArt({ hand, mount, children }: { hand: Hand; mount: Mount; children?: ReactNode }) {
-  const upright = mount === 'standard';
+  const mirrored = hand !== DRAWN[mount].hand;
   return (
     <g className="stickart">
-      <g transform={hand === 'right' ? `translate(${ART.w} 0) scale(-1 1)` : undefined}>
-        <Base shaftTop={upright ? UPRIGHT.at[1] - 6 : 612} />
-        {!upright && (
-          <>
-            <path className="arm-edge" d="M432,618 C506,566 498,492 420,470 C384,460 356,456 336,448" />
-            <path className="arm" d="M432,618 C506,566 498,492 420,470 C384,460 356,456 336,448" />
-          </>
-        )}
-        <g transform={upright ? `translate(${UPRIGHT.at[0] - JOINT[0]} ${UPRIGHT.at[1] - JOINT[1]}) rotate(${UPRIGHT.turn} ${JOINT[0]} ${JOINT[1]})` : undefined}>
-          <Grip />
-        </g>
+      <g transform={mirrored ? `translate(${DRAWN[mount].w} 0) scale(-1 1)` : undefined}>
+        {mount === 'standard' ? <Standard /> : <Omni />}
       </g>
       {children}
     </g>
