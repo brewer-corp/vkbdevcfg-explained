@@ -28,8 +28,9 @@ switch in it, laid out like the fill-in charts pilots already use. Each row says
 switch sends. Press a control and its row lights, whatever it is mapped to; click a row to
 change it. There is a row for each axis too, with its live value, deadzones and curve.
 
-- **One stick at a time**, and the picture follows it: left or right hand from the grip type in
-  the configuration, standard or Omni from the USB product ID. `?look=left-omni` (or
+- **One stick at a time**, and the picture follows it, with a drawing of its own for each of the
+  four: left or right hand from the grip type in the configuration, standard or Omni from the USB
+  product ID. `?look=left-omni` (or
   `right-standard`, and so on) forces a variant.
 - **Layers.** Any button can be made the SHIFT1 or SHIFT2 key. The layer switch above the chart
   then shows what every other control sends while it is held, and a control can be given its own
@@ -41,13 +42,12 @@ change it. There is a row for each axis too, with its live value, deadzones and 
 
 The chart exists for a Gladiator EVO with an SCG grip. Other hardware gets the tables.
 
-The drawings are made by program from photographs: `dev/photo-to-lines.mjs` finds the stick's
-silhouette, runs edge detection inside it and follows the edges into vector paths
-(`src/ui/stickart.paths.ts`). The two in the app come from product photographs, an upright
-right-hand stick and a left-hand one on an Omni adapter; the photographs themselves are not in
-the repository, and the other two sticks are mirror images. Where each control sits on a drawing
-was measured on the same photograph (`src/ui/StickArt.tsx`). A photo of your own stick against a
-plain background goes through the same script.
+The drawings are made by program from the photographs on VKB's own fill-in charts, one for each
+of the four sticks. `dev/photo-to-lines.mjs` finds the stick's silhouette, runs edge detection
+inside it and follows the edges into vector paths. `dev/chart-spots.mjs` reads where each control
+is from the same chart: the end of the leader line that points at it. Both results are in
+`src/ui/stickart.paths.ts`; the charts and photographs themselves are not in the repository. A
+photo of any other stick against a plain background goes through the first script the same way.
 
 **After a write the browser asks for the stick again.** A write restarts the stick, which to the
 browser is an unplug. Chrome keeps a site's permission across an unplug only for devices that

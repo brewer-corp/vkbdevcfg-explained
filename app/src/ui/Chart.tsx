@@ -32,7 +32,7 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
   const hand: Hand = look?.includes('left') ? 'left' : look?.includes('right') ? 'right' : model.hand ?? 'right';
   const mount: Mount = look?.includes('omni') ? 'omni' : look?.includes('standard') ? 'standard' : model.mount ?? 'standard';
 
-  const art = artSize(mount), scale = Math.min(DRAW.w / art.w, DRAW.h / art.h);
+  const art = artSize(hand, mount), scale = Math.min(DRAW.w / art.w, DRAW.h / art.h);
   const origin = [DRAW.x + (DRAW.w - art.w * scale) / 2, DRAW.y + (DRAW.h - art.h * scale) / 2];
   const at = (id: string): [number, number] => { const [x, y] = spot(id, hand, mount); return [origin[0] + scale * x, origin[1] + scale * y]; };
   const placed = useMemo(() => {

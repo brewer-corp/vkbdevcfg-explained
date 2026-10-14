@@ -433,13 +433,12 @@ describe('the chart', () => {
     expect(logicalFunction(c, spare - 1).auto).toBe(true);                              // the spare line was handed back
     expect(physicalFunction(c, l - 1)).toMatchObject({ kind: 'Button', detail: '' });
   });
-  it('places every control inside the drawing, in all four variants', () => {
+  it('places every control inside its drawing, for all four sticks', () => {
     for (const g of [...SCG_CHART.inner, ...SCG_CHART.outer])
       for (const hand of ['left', 'right'] as const)
         for (const mount of ['standard', 'omni'] as const) {
-          const [x, y] = spot(g.id, hand, mount), art = artSize(mount);
+          const [x, y] = spot(g.id, hand, mount), art = artSize(hand, mount);
           expect(x > 0 && x < art.w && y > 0 && y < art.h, `${g.id} ${hand} ${mount}: ${x},${y}`).toBe(true);
-          expect(spot(g.id, hand === 'left' ? 'right' : 'left', mount)[0]).toBeCloseTo(art.w - x);
         }
   });
 });
