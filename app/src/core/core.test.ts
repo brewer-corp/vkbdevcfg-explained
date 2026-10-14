@@ -10,6 +10,7 @@ import { parseAfter, parseInput } from '../ui/Live';
 import { extRegisters, wiring } from './wiring';
 import { Session, applyToStick, backupName, checkStick, noteUnchecked, settleUnchecked } from '../session';
 import { foreignSigns, stickModel } from './identity';
+import { curveOutput, curvePoints, curveState, setCurvePoint, setCurveShape } from './curve';
 import { SCG_CHART, chartFits, freeLine, lineOf, roleOf, rowSends, setLayered, setRole, shiftsInUse } from './chart';
 import { artSize, spot } from '../ui/StickArt';
 
@@ -208,11 +209,11 @@ describe('wiring: the vendor diagram\'s control names', () => {
     expect(wiring(b, 0x0126).has(6)).toBe(false);       // a Gunfighter has no register of its own
     expect(wiring(b, 0x0126).get(10)?.name).toBe('Trigger 1');
   });
-  it('swaps A4 left and right on the left-hand grip', () => {
+  it('wires the left-hand grip like the right-hand one (the vendor diagram swaps A4 left and right; a real stick does not)', () => {
     const l = new Uint8Array(b); l[0x332] = 0x49;
+    expect(wiring(l).get(27)).toMatchObject({ name: 'A4 left', owner: 'SCG-L', key: 'a4.left' });
+    expect(wiring(l).get(28)?.name).toBe('A4 right');
     expect(wiring(b).get(27)?.name).toBe('A4 left');
-    expect(wiring(l).get(27)).toMatchObject({ name: 'A4 right', owner: 'SCG-L', key: 'a4.right' });
-    expect(wiring(l).get(28)?.name).toBe('A4 left');
   });
   it('names nothing without a known grip', () => {
     const none = new Uint8Array(b); none.fill(0, 0x330, 0x340);
@@ -440,5 +441,42 @@ describe('the chart', () => {
           const [x, y] = spot(g.id, hand, mount), art = artSize(hand, mount);
           expect(x > 0 && x < art.w && y > 0 && y < art.h, `${g.id} ${hand} ${mount}: ${x},${y}`).toBe(true);
         }
+  });
+});
+
+describe('response curves', () => {
+  const b = demoBlock();
+  it('a soft centre does less for small movements and still reaches full output', () => {
+    const p = curvePoints(60);
+    expect(p[9]).toBe(128);                                   // unity gain at full travel
+    expect(p[0]).toBeLessThan(70);
+    expect(p.every((v, i) => i === 0 || v >= p[i - 1])).toBe(true);
+    expect(curveOutput(p, 1)).toBe(1);
+    expect(curveOutput(p, 0.2)).toBeLessThan(0.12);
+    expect(curvePoints(0)).toEqual(Array(10).fill(128));
+    expect(curveOutput(curvePoints(-40), 0.2)).toBeGreaterThan(0.25);    // a sharp centre does more
+    for (let x = 0.05; x < 1; x += 0.05) expect(curveOutput(p, x + 0.05)).toBeGreaterThan(curveOutput(p, x));   // never doubles back
+  });
+  it('choosing a shape switches the curve on, for this axis\'s own curve, and can be read back', () => {
+    const c = new Uint8Array(b); c[0x69a + 2 * 3] = 0x05;      // the axis was pointed at another curve
+    expect(curveState(c, 3)).toMatchObject({ on: false, shape: 0 });
+    setCurveShape(c, 3, 60);
+    expect(curveState(c, 3)).toMatchObject({ on: true, shape: 60 });
+    expect(c[0x69a + 2 * 3] & 0x0f).toBe(0);
+    expect([...c.subarray(0xbc + 30, 0xbc + 40)]).toEqual(curvePoints(60));
+    setCurveShape(c, 3, 0);
+    expect(curveState(c, 3)).toMatchObject({ on: false });
+    expect([...c.subarray(0xbc + 30, 0xbc + 40)]).toEqual(curvePoints(60));   // switching off leaves the points alone
+  });
+  it('dragging a point sets what the axis gives there, and makes the curve a custom one', () => {
+    const c = new Uint8Array(b);
+    setCurvePoint(c, 0, 4, 0.25);                             // at half travel, give a quarter
+    expect(c[0xbc + 4]).toBe(64);
+    expect(curveOutput([...c.subarray(0xbc, 0xbc + 10)], 0.5)).toBeCloseTo(0.25);
+    expect(curveState(c, 0)).toMatchObject({ on: true, shape: null });
+  });
+  it('recognises a curve it did not make as custom', () => {
+    const c = new Uint8Array(b); c.set(fromHex('3a424a515961697078 80'), 0xbc + 40); c[0x7c + 8 * 4 + 3] |= 0x10;
+    expect(curveState(c, 4)).toMatchObject({ on: true, shape: null });
   });
 });

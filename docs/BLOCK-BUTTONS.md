@@ -589,8 +589,11 @@ Gladiator.
 | 16 | B1 | | |
 
 That is a Gladiator base with an SCG grip on registers 2–5, which is what the
-test stick's external-device record says it has. The left-hand grip, SCG-L,
-differs in one place: A4 left and right are exchanged (left = 28, right = 27).
+test stick's external-device record says it has. The vendor's table for the
+left-hand grip, SCG-L, differs in one place: A4 left and right are exchanged
+(left = 28, right = 27). **That is wrong for a real left-hand stick**: its owner
+found A4 left on line 27, as on the right-hand grip. It is also the only
+reading under which the factory button numbers run clockwise on both grips.
 The tool has tables of the same kind for the F14 and KG12 grips, the MCG and
 MCG Ultimate, STECS, and the SEM, THQ, FSM.GA, STEM and ATEM modules.
 

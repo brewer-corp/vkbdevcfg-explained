@@ -27,7 +27,7 @@ export function Field({ ed, base, def }: { ed: Editor; base: number; def: FieldD
 
   return (
     <label className={`field ${value !== before ? 'changed' : ''} ${locked ? 'locked' : ''}`} title={def.hint}>
-      <span>{def.label}{def.conf === 'verified' && <em className="pill ok">verified</em>}</span>
+      <span>{def.label}{def.conf !== 'verified' && <em className="pill unsure" title="Read from the vendor tool's code; its effect has not been seen on a stick. Locked unless Experimental fields is on.">unverified</em>}</span>
       {control}
     </label>
   );

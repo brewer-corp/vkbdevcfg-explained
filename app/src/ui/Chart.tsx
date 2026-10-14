@@ -4,7 +4,7 @@ import { GroupDef, Layer, RowDef, SCG_AXES, SCG_CHART, freeLine, lineOf, roleOf,
 import { stickModel } from '../core/identity';
 import { HID_USAGES, LOGICAL_AXIS, LogicalChoice, logicalAxisBase, logicalEntry, logicalFunction, physicalEntry, physicalFunction, readField, setLogical } from '../core/schema';
 import type { Session } from '../session';
-import { Curve } from './Axes';
+import { CurveEditor } from './CurveEditor';
 import { Field } from './Field';
 import type { LiveState } from './Live';
 import { Hand, Mount, StickArt, artSize, spot } from './StickArt';
@@ -237,9 +237,11 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
           {v !== undefined && on && <em className="pill">{Math.round((v / max) * 100)} %</em>}</h3>
         <div className="icols">
           <div>
-            {['en', 'inv', 'dzlo', 'dzhi'].map((k) => <Field key={k} ed={ed} base={base} def={f(k)} />)}
+            {['en', 'inv', 'dzlo', 'dzhi', 'rel'].map((k) => <Field key={k} ed={ed} base={base} def={f(k)} />)}
+            <p className="dim small">The bar is the raw number the PC receives, not “how far forward”: by joystick
+              convention Y counts down as the stick goes forward. Inverted flips it for games too.</p>
           </div>
-          <Curve ed={ed} n={sensor} />
+          <CurveEditor ed={ed} n={sensor} />
         </div>
       </>
     );

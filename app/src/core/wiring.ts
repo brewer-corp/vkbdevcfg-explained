@@ -18,8 +18,10 @@ const SCG: Table = {
   ...hat(9, 'A1'), ...hat(13, 'A3'), ...hat(17, 'A4'), ...hat(21, 'C1'),
   25: 'C1 push', 26: 'A1 push', 27: 'Rapid fire up', 28: 'Rapid fire down',
 };
-// The left-hand grip is drawn with A4's left and right exchanged; everything else is the same.
-const SCG_L: Table = { ...SCG, 19: 'A4 right', 20: 'A4 left' };
+// The vendor's diagram for the left-hand grip has A4's left and right exchanged. A real left-hand stick does not:
+// its owner found A4 left on the same line as on the right-hand grip, which is also what keeps the factory button
+// numbers running clockwise. So both grips share one table.
+const SCG_L: Table = SCG;
 
 const F14: Table = {
   1: 'Trigger 2', 2: 'Trigger 1', 3: 'Button', 4: 'Weapon select push', 5: 'Button', 6: 'Trigger (lower)', 7: 'Pinky', 8: 'Hat push',

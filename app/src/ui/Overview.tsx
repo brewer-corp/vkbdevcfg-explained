@@ -55,9 +55,9 @@ export function Overview({ session, ed, go, changed }: { session: Session; ed: E
           <li>The stick restarts for about three seconds, then the tool reads it back to check.</li>
         </ol>
         <p className="dim">
-          Fields marked <em className="pill ok">verified</em> have been changed on a real stick and read back.
-          Everything else comes from reading the vendor tool’s code and is locked unless you turn on
-          <b> Experimental fields</b>. The stick does not check what it is given — this tool is the only guard.
+          Most settings here have been changed on a real stick and their effect seen. The few marked
+          <em className="pill unsure">unverified</em> come only from reading the vendor tool’s code, and are locked unless
+          you turn on <b> Experimental fields</b>. The stick does not check what it is given — this tool is the only guard.
         </p>
         {changed > 0 && <button className="btn" onClick={go}>Review {changed} changed byte{changed > 1 ? 's' : ''}</button>}
       </section>
