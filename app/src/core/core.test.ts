@@ -10,6 +10,8 @@ import { parseAfter, parseInput } from '../ui/Live';
 import { extRegisters, wiring } from './wiring';
 import { Session, applyToStick, backupName, checkStick, noteUnchecked, settleUnchecked } from '../session';
 import { foreignSigns, stickModel } from './identity';
+import { SCG_CHART, chartFits, freeLine, lineOf, roleOf, rowSends, setLayered, setRole, shiftsInUse } from './chart';
+import { ART, spot } from '../ui/StickArt';
 
 const text = (s: string) => new TextEncoder().encode(s);
 
@@ -183,7 +185,7 @@ describe('wiring: the vendor diagram\'s control names', () => {
   it('places a grip by its first register', () => {
     expect(extRegisters(b, 0)).toEqual({ type: 8, first: 2, count: 4 });
     const w = wiring(b);
-    expect(w.get(10)).toEqual({ name: 'Trigger 1', owner: 'SCG' });
+    expect(w.get(10)).toMatchObject({ name: 'Trigger 1', owner: 'SCG', key: 'trigger.1' });
     expect(w.get(13)?.name).toBe('Mini-stick push');
     expect(w.get(36)?.name).toBe('Rapid fire down');
     expect(w.has(37)).toBe(false);                      // the grip's four spare lines
@@ -202,14 +204,14 @@ describe('wiring: the vendor diagram\'s control names', () => {
     expect(w.get(1)?.owner).toBe('Base');
   });
   it('names the base only for a Gladiator', () => {
-    expect(wiring(b, 0x0200).get(6)).toEqual({ name: 'F1', owner: 'Base' });
+    expect(wiring(b, 0x0200).get(6)).toMatchObject({ name: 'F1', owner: 'Base' });
     expect(wiring(b, 0x0126).has(6)).toBe(false);       // a Gunfighter has no register of its own
     expect(wiring(b, 0x0126).get(10)?.name).toBe('Trigger 1');
   });
   it('swaps A4 left and right on the left-hand grip', () => {
     const l = new Uint8Array(b); l[0x332] = 0x49;
     expect(wiring(b).get(27)?.name).toBe('A4 left');
-    expect(wiring(l).get(27)).toEqual({ name: 'A4 right', owner: 'SCG-L' });
+    expect(wiring(l).get(27)).toMatchObject({ name: 'A4 right', owner: 'SCG-L', key: 'a4.right' });
     expect(wiring(l).get(28)?.name).toBe('A4 left');
   });
   it('names nothing without a known grip', () => {
@@ -375,5 +377,69 @@ describe('which stick this is', () => {
     const bare = new Uint8Array(right); bare.fill(0, 0x330, 0x340);
     expect(stickModel(bare, 0x3201)).toEqual({ hand: 'left', mount: 'omni' });
     expect(stickModel(bare, 0x0126)).toEqual({ hand: null, mount: null });
+  });
+});
+
+describe('the chart', () => {
+  const b = demoBlock(), w = wiring(b);
+  const rows = [...SCG_CHART.inner, ...SCG_CHART.outer].flatMap((g) => g.rows);
+  const at = (key: string) => lineOf(w, key)!;
+  it('has a wired line for every row, and no line twice', () => {
+    expect(chartFits(w)).toBe(true);
+    const lines = rows.map((r) => lineOf(w, r.key));
+    expect(lines.every((l) => l !== null)).toBe(true);
+    expect(new Set(lines).size).toBe(rows.length);
+    expect(rows.length).toBe(35);                       // seven on the base, twenty-eight on the grip
+    const bare = new Uint8Array(b); bare.fill(0, 0x330, 0x340);
+    expect(chartFits(wiring(bare))).toBe(false);
+  });
+  it('says what each kind of control sends', () => {
+    expect(rowSends(b, at('trigger.1'))).toMatchObject({ text: 'Button 1', simple: true, via: 10 });
+    expect(rowSends(b, at('a1.up'))).toMatchObject({ text: 'Hat 1 up', simple: false });
+    expect(rowSends(b, at('mini-stick.push')).text).toBe('Switches mini-stick: hat or axes');
+    expect(rowSends(b, at('en.a'))).toMatchObject({ text: 'Button 23', via: 1 });      // the dial's two directions
+    expect(rowSends(b, at('en.b'))).toMatchObject({ text: 'Button 24', via: 2 });
+    expect(rowSends(b, at('f1')).text).toBe('Button 27');
+    const auto = new Uint8Array(b); setLogical(auto, at('f1') - 1, 'auto');
+    expect(rowSends(auto, at('f1')).text).toBe('Button 6');                             // left on auto: its own line number
+    const shifted = new Uint8Array(b); setRole(shifted, b, at('d1'), 'shift1');
+    expect(rowSends(shifted, at('d1')).text).toBe('SHIFT1 key');
+  });
+  it('makes a control a shift key and back', () => {
+    const c = new Uint8Array(b), l = at('d1');
+    expect(shiftsInUse(c)).toEqual({ shift1: false, shift2: false });
+    setRole(c, b, l, 'shift1');
+    expect(roleOf(c, l)).toBe('shift1');
+    expect(physicalFunction(c, l - 1)).toMatchObject({ kind: 'SHIFT', detail: 'SHIFT1' });
+    expect(shiftsInUse(c)).toEqual({ shift1: true, shift2: false });
+    setRole(c, b, l, 'button');
+    expect(c).toEqual(b);
+  });
+  it('gives a button its own output on a shift layer, on a spare line', () => {
+    const c = new Uint8Array(b), l = at('a2'), wired = (n: number) => w.has(n);
+    const spare = freeLine(c, wired)!;
+    expect(spare).toBeGreaterThan(40);
+    expect(w.has(spare)).toBe(false);
+    setLayered(c, l, 1, spare); setLogical(c, spare - 1, 'button', 40);
+    expect(rowSends(c, l, 0).text).toBe(rowSends(b, l, 0).text);                        // the normal layer is untouched
+    expect(rowSends(c, l, 1)).toMatchObject({ text: 'Button 40', via: spare });
+    expect(rowSends(c, l, 2).via).toBe(l);
+    expect(physicalFunction(c, l - 1)).toMatchObject({ kind: 'Button', detail: `SHIFT1 → line ${spare}` });
+    expect(freeLine(c, wired)).not.toBe(spare);                                         // a second one gets a different line
+    setLayered(c, l, 2, freeLine(c, wired)!);
+    expect(rowSends(c, l, 2).via).not.toBe(l);
+    setLayered(c, l, 1, null); setLayered(c, l, 2, null);
+    expect(rowSends(c, l, 1).via).toBe(l);
+    expect(logicalFunction(c, spare - 1).auto).toBe(true);                              // the spare line was handed back
+    expect(physicalFunction(c, l - 1)).toMatchObject({ kind: 'Button', detail: '' });
+  });
+  it('places every control inside the drawing, in all four variants', () => {
+    for (const g of [...SCG_CHART.inner, ...SCG_CHART.outer])
+      for (const hand of ['left', 'right'] as const)
+        for (const mount of ['standard', 'omni'] as const) {
+          const [x, y] = spot(g.id, hand, mount);
+          expect(x > 0 && x < ART.w && y > 0 && y < ART.h, `${g.id} ${hand} ${mount}: ${x},${y}`).toBe(true);
+          expect(spot(g.id, hand === 'left' ? 'right' : 'left', mount)[0]).toBeCloseTo(ART.w - x);
+        }
   });
 });

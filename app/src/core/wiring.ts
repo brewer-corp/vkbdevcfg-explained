@@ -60,7 +60,10 @@ const GLADIATOR_BASE: Table = {
 const isGladiator = (productId: number) =>
   (productId >= 0x0200 && productId <= 0x21ff) || (productId >= 0x3200 && productId <= 0x41ff);
 
-export interface Control { name: string; owner: string }
+/** `key` is a stable handle for a control ("a3.up", "trigger.1"), whichever line it turns out to be on. */
+export interface Control { key: string; name: string; owner: string }
+
+const keyOf = (name: string) => name.replace(/\s*\(.*?\)/g, '').trim().toLowerCase().replace(/\s+/g, '.');
 
 /** Registers an external device claims: eight lines each, the first register numbered from 1. */
 export function extRegisters(block: Uint8Array, index: number): { type: number; first: number; count: number } {
@@ -82,12 +85,12 @@ export function wiring(block: Uint8Array, productId?: number): Map<number, Contr
     const base = 8 * (first - 1), limit = base + 8 * count;
     for (const [n, name] of Object.entries(grip.table)) {
       const line = base + +n;
-      if (line <= limit && line <= 128) out.set(line, { name, owner: grip.name });
+      if (line <= limit && line <= 128) out.set(line, { key: keyOf(name), name, owner: grip.name });
     }
   }
   // Without a product id (a file), a grip starting on register 2 is the mark of a Gladiator base.
   const base = productId === undefined ? gripOnTwo : isGladiator(productId);
   if (base && registerOneFree)
-    for (const [n, name] of Object.entries(GLADIATOR_BASE)) out.set(+n, { name, owner: 'Base' });
+    for (const [n, name] of Object.entries(GLADIATOR_BASE)) out.set(+n, { key: +n === 1 ? 'en.a' : +n === 2 ? 'en.b' : keyOf(name), name, owner: 'Base' });
   return out;
 }

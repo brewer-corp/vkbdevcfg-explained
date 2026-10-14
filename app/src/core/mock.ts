@@ -28,9 +28,10 @@ export function demoBlock(): Uint8Array {
   b.set(fromHex('3a00 3800 3b00 3900'), physicalEntry(16));                   // hat: down, up, left, right
   for (let l = 28; l < 32; l++) b.set([0x80 | l, l], physicalEntry(l));
   for (let l = 36; l < 40; l++) b.set([0x7f, 0xff], physicalEntry(l));
-  let n = 1;
-  for (const l of [9, 8, 10, 11, 13, 14, 15, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 0, 1, 40])
-    b.set([0x80 | (n++ - 1), 0xff], logicalEntry(l));
+  // which joystick button each wired line sends, as a Gladiator EVO leaves the factory (line: button)
+  const sends: Record<number, number> = { 1: 23, 2: 24, 3: 25, 4: 26, 5: 29, 6: 27, 7: 28, 9: 2, 10: 1, 11: 5, 12: 3, 14: 10, 15: 15, 16: 4,
+    21: 8, 22: 6, 23: 9, 24: 7, 25: 13, 26: 11, 27: 14, 28: 12, 29: 18, 30: 16, 31: 19, 32: 17, 33: 20, 34: 30, 35: 21, 36: 22 };
+  for (const [line, button] of Object.entries(sends)) b.set([0x80 | (button - 1), 0xff], logicalEntry(+line - 1));
   b.set(fromHex('000200020002000200020002'), 0x30c);
   b.set(fromHex('0b11488442 80a000 81a14445'), 0x330);                         // external device 0: SCG grip
   b.set(fromHex('0c40404040404040'), 0x3b0);

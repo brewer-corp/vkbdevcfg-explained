@@ -164,3 +164,86 @@ table.lines { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-
 .note .row { margin-top: 10px; }
 .note label.toggle { display: flex; margin-top: 10px; color: var(--fg); }
 .note table.lines { margin: 10px 0 0; }
+
+/* ------------------------------------------------------------ the chart --- */
+.page.wide { max-width: 1560px; padding: 12px 22px 0; }
+.shell { padding-bottom: 64px; }
+.chartwrap { min-width: 980px; }
+.charttools { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 0 0 8px; font-size: 13px; }
+.seg { display: inline-flex; border: 1px solid var(--line-2); }
+.seg button { background: none; border: 0; border-right: 1px solid var(--line-2); color: var(--fg-dim); cursor: pointer; padding: 6px 12px;
+  font-family: var(--caps); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; }
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: var(--accent); color: #000; }
+.seg button:disabled { opacity: .35; cursor: not-allowed; }
+.chart { position: relative; margin: 0 auto; max-width: max(960px, calc((100vh - 206px) * 1280 / 792)); }
+.chart svg { display: block; width: 100%; height: auto; user-select: none; }
+
+.chart .leader { fill: none; stroke: var(--line-2); stroke-width: 1; pointer-events: none; }
+.chart .leader.on { stroke: var(--accent-2); stroke-width: 1.6; }
+.chart .leader.live { stroke: var(--accent); stroke-width: 2; }
+.chart .spot { fill: var(--bg); stroke: var(--accent-2); stroke-width: 1.6; cursor: pointer; }
+.chart .spot.on { fill: var(--accent-2); }
+.chart .spot.live { fill: var(--accent); stroke: var(--accent-hot); filter: drop-shadow(0 0 6px rgba(255,113,0,.9)); }
+
+.chart rect.title { fill: var(--line); }
+.chart text.title { fill: var(--accent); font-family: var(--caps); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; }
+.chart .row { cursor: pointer; }
+.chart .row rect { fill: var(--bg-2); stroke: var(--line); stroke-width: 1; }
+.chart .row:hover rect { fill: var(--bg-3); stroke: var(--line-2); }
+.chart .row text { fill: var(--fg); font-family: var(--sans); font-size: 12.5px; }
+.chart .row .glyph { fill: var(--accent-2); font-family: var(--mono); font-size: 12px; }
+.chart .row .glyph.ring { fill: none; stroke: var(--accent-2); stroke-width: 1.4; }
+.chart .row.live .glyph { fill: #000; }
+.chart .row.live .glyph.ring { fill: none; stroke: #000; }
+.chart .row .value { fill: var(--fg-dim); font-family: var(--mono); font-size: 12px; }
+.chart .row.same text.name { fill: var(--fg-faint); }
+.chart .row.sel rect { stroke: var(--accent-2); stroke-width: 2; fill: rgba(47,180,255,.10); }
+.chart .row.live rect { fill: var(--accent); stroke: var(--accent-hot); }
+.chart .row.live text { fill: #000; }
+.chart .row .dirty { fill: var(--warn); }
+.chart .row.axis.off { opacity: .4; }
+.chart .row .track { fill: #000; stroke: var(--line-2); }
+.chart .row .fill { fill: var(--accent); stroke: none; }
+.chart .row.sel .track, .chart .row:hover .track { fill: #000; }
+
+.stickart .body { fill: #14100a; stroke: var(--fg); stroke-width: 4.5; stroke-linejoin: round; }
+.stickart .plate { fill: #0a0705; stroke: var(--fg-faint); stroke-width: 2.5; stroke-linejoin: round; }
+.stickart .hole { fill: var(--bg); stroke: var(--fg-faint); stroke-width: 2; }
+.stickart .detail { fill: none; stroke: var(--fg-dim); stroke-width: 3; stroke-linejoin: round; }
+.stickart .ridge { fill: none; stroke: var(--fg-faint); stroke-width: 2.4; }
+.stickart .part { fill: #241a0e; stroke: var(--fg); stroke-width: 3.5; stroke-linejoin: round; }
+.stickart .part.red { fill: #a3261d; stroke: #ff6a5c; }
+.stickart .hat circle { fill: #241a0e; stroke: var(--fg); stroke-width: 3.5; }
+.stickart .hat .inner { fill: none; stroke: var(--fg-dim); stroke-width: 2.5; }
+.stickart .hat path { fill: none; stroke: var(--fg-dim); stroke-width: 3; stroke-linecap: round; }
+.stickart .hat.thumb circle { fill: #3a3128; }
+.stickart .hat .ridge { stroke: var(--fg-faint); stroke-width: 1.6; }
+.stickart .shaft { fill: #14100a; stroke: var(--fg); stroke-width: 4.5; }
+.stickart .arm-edge { fill: none; stroke: var(--fg); stroke-width: 79; stroke-linecap: round; }
+.stickart .arm { fill: none; stroke: #14100a; stroke-width: 70; stroke-linecap: round; }
+
+.inspector { position: absolute; left: 30.6%; width: 38.8%; bottom: 0.6%; max-height: 62%; overflow: auto; background: rgba(13,10,6,.96);
+  border: 1px solid var(--line-2); border-top: 2px solid var(--accent-2); padding: 12px 16px 14px; font-size: 13.5px; }
+.inspector h3 { margin: 0 0 10px; font-family: var(--caps); font-weight: 400; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.inspector h3 span { color: var(--fg); margin-left: 8px; }
+.inspector p { margin: 0 0 10px; }
+.inspector .btn { margin: 4px 8px 4px 0; }
+.ifield { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 9px; }
+.ifield > span:first-child { color: var(--fg-dim); }
+.ifield select, .ifield input[type=number] { background: #000; color: var(--fg); border: 1px solid var(--line-2); font: 13px var(--mono); padding: 4px 6px; }
+.ifield input[type=number] { width: 74px; }
+.icols { display: grid; grid-template-columns: 1fr 190px; gap: 16px; align-items: start; }
+.inspector .curve h3 { display: none; }
+
+/* ---------------------------------------------- applying: a bar and a drawer --- */
+.applybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 9px 22px; background: var(--bg-2); border-top: 1px solid var(--line-2); font-size: 13.5px; color: var(--fg-dim); }
+.applybar.dirty { border-top-color: var(--accent); color: var(--fg); }
+.applybar .row { margin: 0; }
+.pill.warn { background: var(--bad); border-color: var(--bad); color: #000; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 49px; z-index: 7; width: min(860px, 100%); overflow: auto; padding: 0 18px 24px;
+  background: var(--bg); border-left: 1px solid var(--accent); box-shadow: -18px 0 40px rgba(0,0,0,.7); display: none; }
+.drawer.open { display: block; }
+.drawerhead { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 12px 0; margin-bottom: 10px;
+  background: var(--bg); border-bottom: 1px solid var(--line-2); font-family: var(--caps); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }

@@ -21,6 +21,30 @@ device node:
 SUBSYSTEM=="hidraw", ATTRS{idVendor}=="231d", MODE="0660", GROUP="plugdev", TAG+="uaccess"
 ```
 
+## The chart
+
+The first screen is a picture of the stick with a box for every control and a row for every
+switch in it, laid out like the fill-in charts pilots already use. Each row says what that
+switch sends. Press a control and its row lights, whatever it is mapped to; click a row to
+change it. There is a row for each axis too, with its live value, deadzones and curve.
+
+- **One stick at a time**, and the picture follows it: left or right hand from the grip type in
+  the configuration, standard or Omni from the USB product ID. `?look=left-omni` (or
+  `right-standard`, and so on) forces a variant.
+- **Layers.** Any button can be made the SHIFT1 or SHIFT2 key. The layer switch above the chart
+  then shows what every other control sends while it is held, and a control can be given its own
+  output there. The stick does that through a spare line; the chart picks one and never shows it.
+- **What it does not edit yet:** hats, keys and the rarer functions (they are shown, and edited
+  on the table tabs), LEDs, calibration.
+- **Applying** is a bar along the bottom and a drawer: the list of changed bytes, the write, the
+  check, and profiles.
+
+The chart exists for a Gladiator EVO with an SCG grip. Other hardware gets the tables.
+
+The drawing (`src/ui/StickArt.tsx`) is this project's own line art, traced loosely over product
+photographs for proportion. It is drawn once, as a left-hand stick on an Omni adapter; the
+standard stick stands the same grip upright, and the right-hand stick is the mirror image.
+
 **After a write the browser asks for the stick again.** A write restarts the stick, which to the
 browser is an unplug. Chrome keeps a site's permission across an unplug only for devices that
 report a USB serial number, and these sticks report none. So the tool waits a few seconds, and

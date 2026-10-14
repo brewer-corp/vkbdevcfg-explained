@@ -41,7 +41,7 @@ export function Axes({ ed }: { ed: Editor }) {
 }
 
 /** A response curve: ten points, one per 10 % of travel. 0x80 means output = input. */
-function Curve({ ed, n }: { ed: Editor; n: number }) {
+export function Curve({ ed, n }: { ed: Editor; n: number }) {
   const at = curveBase(n);
   const pts = [...ed.block.subarray(at, at + CURVE_POINTS)];
   const y = (x: number, v: number) => Math.min(1, (x * v) / 128);

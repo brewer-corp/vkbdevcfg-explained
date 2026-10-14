@@ -11,14 +11,17 @@ import { BlockMap } from './ui/BlockMap';
 import { Changes, Foreign } from './ui/Changes';
 import { foreignSigns } from './core/identity';
 import { Live, useLive } from './ui/Live';
+import { Chart } from './ui/Chart';
+import { chartFits } from './core/chart';
 
-const TABS = ['Overview', 'Axes', 'Buttons', 'LEDs', 'Live', 'Block', 'Review & apply'] as const;
+// The chart is the app; the rest are the same settings as tables, for what the chart does not cover.
+const TABS = ['Stick', 'Overview', 'Axes', 'Buttons', 'LEDs', 'Live', 'Block'] as const;
 type Tab = (typeof TABS)[number];
 
 /** ?tab=axes opens on that tab (used by tests and for deep links). */
 function initialTab(): Tab {
   const t = new URLSearchParams(location.search).get('tab');
-  return (t && TABS.find((x) => x.toLowerCase().startsWith(t.toLowerCase()))) || 'Overview';
+  return (t && TABS.find((x) => x.toLowerCase().startsWith(t.toLowerCase()))) || 'Stick';
 }
 
 /** Passed to every editor: the working block, a way to change it, and whether a field may be edited. */
@@ -41,6 +44,7 @@ export function App() {
   const [error, setError] = useState('');
   const [known, setKnown] = useState<HIDDevice[]>([]);
   const [foreign, setForeign] = useState<Foreign | null>(null);
+  const [review, setReview] = useState(() => new URLSearchParams(location.search).has('review'));
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => { grantedSticks().then(setKnown).catch(() => {}); }, []);
@@ -118,6 +122,8 @@ export function App() {
     canEdit: (conf) => conf === 'verified' || experimental,
   };
 
+  const charted = chartFits(editor.controls);
+
   return (
     <div className="shell">
       <Top>
@@ -132,29 +138,52 @@ export function App() {
       <nav className="tabs">
         {TABS.map((t) => (
           <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>
-            {t}{t === 'Review & apply' && changedBytes > 0 && <i>{changedBytes}</i>}
+            {t}
           </button>
         ))}
       </nav>
-      <main className="page">
-        {tab === 'Overview' && <Overview session={session} ed={editor} go={() => setTab('Review & apply')} changed={changedBytes} />}
+      <main className={`page ${tab === 'Stick' ? 'wide' : ''}`}>
+        {tab === 'Stick' && (charted
+          ? <Chart session={session} ed={editor} live={live} />
+          : <p className="intro">There is no drawing for this hardware yet: the chart covers a Gladiator EVO with an SCG grip.
+              Everything is still editable on the other tabs.</p>)}
+        {tab === 'Overview' && <Overview session={session} ed={editor} go={() => setReview(true)} changed={changedBytes} />}
         {tab === 'Axes' && <Axes ed={editor} />}
         {tab === 'Buttons' && <Buttons ed={editor} live={live} />}
         {tab === 'Live' && <Live ed={editor} live={live} />}
         {tab === 'LEDs' && <Leds ed={editor} />}
         {tab === 'Block' && <BlockMap ed={editor} />}
-        {tab === 'Review & apply' && (
-          <Changes session={session} ed={editor} runs={changes} foreign={foreign}
-            onDiscard={() => { setBlock(new Uint8Array(session.original)); setForeign(null); }}
-            onLoad={(name, b) => {
-              // Sticks of one family share a type id, so a profile from the other hand's stick loads without complaint.
-              const signs = session.source === 'file' ? [] : foreignSigns(session.original, b);
-              setBlock(b); setForeign(signs.length ? { name, signs } : null);
-            }}
-            onApplied={(stored) => { session.original = stored; setSession({ ...session }); setBlock(new Uint8Array(stored)); setForeign(null); }}
-            onChecked={() => setSession({ ...session })} />
-        )}
       </main>
+      {/* Review, write, check and profiles live in a drawer over whichever tab is open. It stays mounted while closed:
+          a write in progress keeps its state. */}
+      <aside className={`drawer ${review ? 'open' : ''}`} aria-hidden={!review}>
+        <div className="drawerhead">
+          <b>{changedBytes ? 'Review and write' : 'The stick and its profiles'}</b>
+          <button className="btn ghost" onClick={() => setReview(false)}>Close</button>
+        </div>
+        <Changes session={session} ed={editor} runs={changes} foreign={foreign}
+          onDiscard={() => { setBlock(new Uint8Array(session.original)); setForeign(null); }}
+          onLoad={(name, b) => {
+            // Sticks of one family share a type id, so a profile from the other hand's stick loads without complaint.
+            const signs = session.source === 'file' ? [] : foreignSigns(session.original, b);
+            setBlock(b); setForeign(signs.length ? { name, signs } : null);
+          }}
+          onApplied={(stored) => { session.original = stored; setSession({ ...session }); setBlock(new Uint8Array(stored)); setForeign(null); }}
+          onChecked={() => setSession({ ...session })} />
+      </aside>
+      <footer className={`applybar ${changedBytes ? 'dirty' : ''}`}>
+        <span>
+          {changedBytes ? <><b>{changedBytes} byte{changedBytes > 1 ? 's' : ''} changed</b> — nothing is sent until you write.</>
+            : session.source === 'file' ? 'Opened from a file.'
+            : session.checked?.how === 'write' ? `Written and read back at ${session.checked.at.toLocaleTimeString()}.`
+            : 'The stick holds what is on screen.'}
+          {foreign && <em className="pill warn">from another stick</em>}
+        </span>
+        <span className="row">
+          {changedBytes > 0 && <button className="btn ghost" onClick={() => { setBlock(new Uint8Array(session.original)); setForeign(null); }}>Discard</button>}
+          <button className={`btn ${changedBytes ? 'primary' : ''}`} onClick={() => setReview(!review)}>{changedBytes ? 'Review & write' : 'Check & profiles'}</button>
+        </span>
+      </footer>
     </div>
   );
 }
