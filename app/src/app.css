@@ -179,9 +179,10 @@ table.lines { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-
 .chart { position: relative; margin: 0 auto; max-width: max(960px, calc((100vh - 206px) * 1280 / 792)); }
 .chart svg { display: block; width: 100%; height: auto; user-select: none; }
 
-.chart .leader { fill: none; stroke: var(--line-2); stroke-width: 1; pointer-events: none; }
-.chart .leader.on { stroke: var(--accent-2); stroke-width: 1.6; }
-.chart .leader.live { stroke: var(--accent); stroke-width: 2; }
+/* the annotation layer (leader lines, markers) is in the second colour, so it does not read as part of the drawing */
+.chart .leader { fill: none; stroke: var(--accent-2); stroke-width: 1; opacity: .3; pointer-events: none; }
+.chart .leader.on { stroke-width: 1.6; opacity: 1; }
+.chart .leader.live { stroke: var(--accent-hot); stroke-width: 2; opacity: 1; }
 .chart .spot { fill: rgba(5,4,3,.55); stroke: var(--accent-2); stroke-width: 1.4; cursor: pointer; }
 .chart .spot.on { fill: var(--accent-2); }
 .chart .spot.live { fill: var(--accent); stroke: var(--accent-hot); filter: drop-shadow(0 0 6px rgba(255,113,0,.9)); }
@@ -207,11 +208,16 @@ table.lines { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-
 .chart .row .fill { fill: var(--accent); stroke: none; }
 .chart .row.sel .track, .chart .row:hover .track { fill: #000; }
 
-/* strokes are given in screen pixels, so the two drawings (made from photos of different sizes) look alike */
+/* The stick is drawn the way the game draws a ship in the shipyard: a hologram. Strokes are given in screen pixels,
+   so drawings made from photos of different sizes look alike. */
 .stickart * { vector-effect: non-scaling-stroke; }
-.stickart .body { fill: #15110b; stroke: var(--fg-dim); stroke-width: 1.2; stroke-linejoin: round; }
-.stickart .lines { fill: none; stroke: var(--fg); stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
-.stickart .red { fill: #b3271d; stroke: none; }
+.stickart .body { fill: #120702; stroke: none; }
+.stickart .scan { opacity: .2; }
+.stickart pattern rect { fill: var(--accent); }
+.stickart .lines { fill: none; stroke: var(--accent); stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; opacity: .62; }
+.stickart .outline { fill: none; stroke: var(--accent-hot); stroke-width: 1.5; stroke-linejoin: round;
+  filter: drop-shadow(0 0 2.5px rgba(255,113,0,.95)) drop-shadow(0 0 9px rgba(255,113,0,.45)); }
+.stickart .red { fill: #ff3b1f; fill-opacity: .8; stroke: none; }
 
 .inspector { position: absolute; left: 30.6%; width: 38.8%; bottom: 0.6%; max-height: 62%; overflow: auto; background: rgba(13,10,6,.96);
   border: 1px solid var(--line-2); border-top: 2px solid var(--accent-2); padding: 12px 16px 14px; font-size: 13.5px; }

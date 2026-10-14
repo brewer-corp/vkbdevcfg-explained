@@ -28,9 +28,17 @@ export function StickArt({ hand, mount, children }: { hand: Hand; mount: Mount; 
   return (
     <g className="stickart">
       <g transform={`translate(${-art.box[0]} ${-art.box[1]})`}>
+        {/* drawn like a cockpit hologram: a glowing outline, a body of scan lines, the detail in a dimmer line */}
+        <defs>
+          <pattern id="stick-scan" width="8" height="5" patternUnits="userSpaceOnUse">
+            <rect width="8" height="1.6" />
+          </pattern>
+        </defs>
         <path className="body" d={art.body} />
+        <path className="scan" d={art.body} fill="url(#stick-scan)" />
         {art.reds.map((d) => <path key={d.length} className="red" d={d} />)}
         <path className="lines" d={art.lines} />
+        <path className="outline" d={art.body} />
       </g>
       {children}
     </g>
