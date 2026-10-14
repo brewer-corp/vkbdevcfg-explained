@@ -30,3 +30,19 @@ export function foreignSigns(stick: Uint8Array, incoming: Uint8Array): string[] 
       'so the profile was saved from another one — or from this one before it was last calibrated.');
   return signs;
 }
+
+export interface Model { hand: 'left' | 'right' | null; mount: 'standard' | 'omni' | null }
+
+/**
+ * Which hand a Gladiator is built for, and whether it sits on an Omni Throttle adapter.
+ * The hand is a setting: the stick names itself after the grip type in its first external-device record (confirmed on
+ * hardware), so a profile file tells us too. The mount is the firmware, and only shows in the USB product id:
+ * 0x0200 / 0x0201 for a standard stick, 0x3200 / 0x3201 with Omni firmware.
+ */
+export function stickModel(block: Uint8Array, productId?: number): Model {
+  const grip = extDevice(block, 0).type;
+  const gladiator = productId !== undefined && (productId < 0x600 || productId === 0x3200 || productId === 0x3201) && productId >= 0x200;
+  const hand = grip === 8 ? 'right' : grip === 9 ? 'left' : gladiator ? (productId! & 1 ? 'left' : 'right') : null;
+  const mount = productId === 0x3200 || productId === 0x3201 ? 'omni' : gladiator ? 'standard' : null;
+  return { hand, mount };
+}

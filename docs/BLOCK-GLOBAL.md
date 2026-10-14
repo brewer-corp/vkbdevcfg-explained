@@ -314,9 +314,20 @@ left-hand one changes what the stick calls itself, and a game will see a
 different device.
 
 Standard or Omni is different: it is the firmware. VKB's 2.20.C package has
-separate images for the Gladiator EVO and NXT with the Omni Throttle adapter.
-What name and product ID those report has not been read here; this version of
-the vendor program has no table for them.
+separate images for the Gladiator EVO and NXT with the Omni Throttle adapter,
+and a stick flashed with one reports a product ID in a different range:
+
+| Product ID | Stick | How it is known |
+|---|---|---|
+| `0x0200` | Gladiator EVO, right hand | the test stick |
+| `0x0201` | Gladiator EVO, left hand | the test stick with its grip type changed |
+| `0x3200` | Gladiator EVO Omni, right hand | *inferred*: the vendor program gives this ID the right-hand flag and its own icon |
+| `0x3201` | Gladiator EVO Omni, left hand | reported by the owner of one |
+
+The vendor program (`DevListBoxClick`, `0x00415480`) treats any ID below
+`0x0600` by its parity and then names exactly two more, `0x3200` and `0x3201`,
+with the same right and left flags but icons of their own. It has no text for
+them, which is why a search for "Omni" finds nothing.
 
 Eight records of 16 bytes. Block→UI dispatcher `0x006935F4` (control IDs
 0x65–0x76), per-byte dispatcher `0x0068D36C`, status text `ExtDevStat`

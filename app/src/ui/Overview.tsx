@@ -4,6 +4,7 @@ import { blockCrcOk, firmwareText, typeId } from '../core/block';
 import { AXIS_SLOTS, HID_USAGES, LED_EVENT_MAX, LINES, LOGICAL_AXIS, extDevice, ledEvent, logicalAxisBase,
   logicalFunction, readField } from '../core/schema';
 import { Session, forgetUnchecked } from '../session';
+import { stickModel } from '../core/identity';
 import { extRegisters } from '../core/wiring';
 
 export function Overview({ session, ed, go, changed }: { session: Session; ed: Editor; go: () => void; changed: number }) {
@@ -16,6 +17,7 @@ export function Overview({ session, ed, go, changed }: { session: Session; ed: E
   const ext = [...Array(8).keys()].map((i) => extDevice(b, i)).filter((d) => d.type !== 0);
 
   const [late, setLate] = useState(session.late);
+  const model = stickModel(b, session.productId);
   return (
     <>
       {late && (
@@ -39,6 +41,7 @@ export function Overview({ session, ed, go, changed }: { session: Session; ed: E
 
       <section className="panel">
         <h2>What this stick is set up to do</h2>
+        {model.hand && <p><b>Stick:</b> {model.hand}-handed{model.mount === 'omni' ? ', on an Omni Throttle adapter' : model.mount === 'standard' ? ', standard mount' : ''}</p>}
         <p><b>Axes:</b> {axes.join(' · ') || 'none enabled'}</p>
         <p><b>Attached:</b> {ext.length ? ext.map((d) => { const r = extRegisters(b, d.index); return `${d.name} (lines ${8 * (r.first - 1) + 1}–${8 * (r.first - 1 + r.count)}, ${d.leds} LEDs)`; }).join(' · ') : 'no grip or module records'}</p>
         <p><b>Source:</b> {session.source === 'device' ? 'read from the stick over USB' : session.source === 'demo' ? 'a simulated stick' : `the file ${session.name}`}</p>

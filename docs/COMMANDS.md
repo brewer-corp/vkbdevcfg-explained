@@ -288,6 +288,10 @@ Outside the range the bootloader PIDs give type `0x21` ("VKB-Bootloader"; Restar
 `Form16`) and `0x0000` gives type `0x64` ("Zero Controller"). *Inferred*: the bootloader PIDs
 lie inside the first range, so the type `0x21` branch looks unreachable.
 
+**Hand and mount** come from the product ID: below `0x0600`, even is right-handed and odd is
+left-handed; `0x3200` and `0x3201` are the same pair for a stick with Omni firmware. The hand
+itself is set by the grip type in the configuration ([`BLOCK-GLOBAL.md`](BLOCK-GLOBAL.md) §3).
+
 **Generation flags**, from USB string `0x0C` (`GetIndexedString`):
 
 | Flag | String `0x0C` | Effect |

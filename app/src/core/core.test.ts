@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { parseAfter, parseInput } from '../ui/Live';
 import { extRegisters, wiring } from './wiring';
 import { Session, applyToStick, backupName, checkStick, noteUnchecked, settleUnchecked } from '../session';
-import { foreignSigns } from './identity';
+import { foreignSigns, stickModel } from './identity';
 
 const text = (s: string) => new TextEncoder().encode(s);
 
@@ -356,5 +356,24 @@ describe('checking what is on the stick', () => {
       expect(settleUnchecked(wanted)).toMatchObject({ ok: true });
       expect(settleUnchecked(wanted)).toBeUndefined();                                  // settled once
     } finally { delete (globalThis as { sessionStorage?: unknown }).sessionStorage; }
+  });
+});
+
+describe('which stick this is', () => {
+  const right = demoBlock(), left = new Uint8Array(right); left[0x332] = (left[0x332] & 0xe0) | 9;
+  it('takes the hand from the grip type, with or without a stick attached', () => {
+    expect(stickModel(right)).toEqual({ hand: 'right', mount: null });
+    expect(stickModel(left)).toEqual({ hand: 'left', mount: null });
+  });
+  it('takes the mount from the USB product id', () => {
+    expect(stickModel(right, 0x0200)).toEqual({ hand: 'right', mount: 'standard' });
+    expect(stickModel(left, 0x0201)).toEqual({ hand: 'left', mount: 'standard' });
+    expect(stickModel(left, 0x3201)).toEqual({ hand: 'left', mount: 'omni' });
+    expect(stickModel(right, 0x3200)).toEqual({ hand: 'right', mount: 'omni' });
+  });
+  it('falls back to the product id for the hand, and claims nothing for other devices', () => {
+    const bare = new Uint8Array(right); bare.fill(0, 0x330, 0x340);
+    expect(stickModel(bare, 0x3201)).toEqual({ hand: 'left', mount: 'omni' });
+    expect(stickModel(bare, 0x0126)).toEqual({ hand: null, mount: null });
   });
 });
