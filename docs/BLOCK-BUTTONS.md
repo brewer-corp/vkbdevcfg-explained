@@ -597,8 +597,10 @@ reading under which the factory button numbers run clockwise on both grips.
 The tool has tables of the same kind for the F14 and KG12 grips, the MCG and
 MCG Ultimate, STECS, and the SEM, THQ, FSM.GA, STEM and ATEM modules.
 
-**Nothing here has been pressed.** What supports it is agreement: the factory
-configuration puts the four POV Switch directions on exactly the lines the
+**One left-hand stick has been pressed through** by its owner, with the live
+line map open: the table held, apart from the A4 exchange above. Nobody has
+pressed through a right-hand grip. Beyond that, what supports the table is
+agreement: the factory configuration puts the four POV Switch directions on exactly the lines the
 table calls A1 down, up, left and right; the mini-stick switch record on the
 line it calls the mini-stick push; "no function" on the four lines it leaves
 unnamed; and the factory button numbers run up, right, down, left around each
@@ -799,8 +801,15 @@ Still not shown: which physical control is wired to which line (§9.1).
 
 ## 12. Not determined
 
-1. **Which control is on which line**, on hardware (§9.1), and whether a grip's
+1. **Which control is on which line** on a right-hand grip (§9.1): only a
+   left-hand stick has been pressed through. And whether a grip's
    first-register field moves its lines.
+1a. **Whether any left-hand grip is wired the way the vendor's table says.** The
+   table exchanges A4 left and right for the SCG-L, in both the Gladiator and
+   the Gunfighter drawing code; the one left-hand stick tested does not. Either
+   the vendor's diagram mislabels every left grip, or an older revision was
+   wired that way. A second left-hand stick, ideally an older one, would settle
+   it.
 2. **The Boolean NOT** (function 1), which did not invert; and the flip-flops,
    counter, comparators, modal switch and function generator, whose parameter
    bits are only partly read.
