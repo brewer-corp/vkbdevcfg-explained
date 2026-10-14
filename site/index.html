@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VKBDevCfg Explained — how VKB sticks are really configured</title>
 <meta name="description" content="A reverse-engineering debrief: the USB protocol, the 4096-byte configuration block and the .cfg profile format behind VKB's joystick configuration tool, verified on a Gladiator EVO.">
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
 
 <div class="topbar"><div class="wrap">
   <a class="mark" href="index.html">VKBDevCfg <b>// Explained</b></a>
   <nav>
+    <a class="tool" href="app/">Config tool</a>
     <a class="here" href="index.html">Debrief</a>
     <a href="guide.html">Pilot's guide</a>
-    <a href="app/">Config tool</a>
-    <a href="https://github.com/spadaval/vkbdevcfg-explained/tree/master/docs">Technical docs</a>
-    <a href="https://github.com/spadaval/vkbdevcfg-explained">Source</a>
+    <a class="ext" href="https://github.com/spadaval/vkbdevcfg-explained/tree/master/docs" target="_blank" rel="noopener">Technical docs</a>
+    <a class="ext" href="https://github.com/spadaval/vkbdevcfg-explained" target="_blank" rel="noopener">Source</a>
   </nav>
 </div></div>
 
@@ -29,6 +29,10 @@
       We took it apart, worked out how it talks to the hardware, and then did the same thing
       without it — reading a Gladiator EVO's configuration from Linux, changing a setting, and
       putting it back.
+    </p>
+    <p class="cta">
+      <a class="btn primary" href="app/">Open the config tool</a>
+      <span>Change what your stick's buttons do and how its axes respond, in the browser. Nothing to install, and there is a demo.</span>
     </p>
     <div class="credit">
       Independent, unaffiliated interoperability research, for configuring hardware you own.

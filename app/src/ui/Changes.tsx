@@ -11,8 +11,10 @@ export interface Foreign { name: string; signs: string[] }
 
 const time = (d: Date) => d.toLocaleTimeString();
 
-export function Changes({ session, ed, runs, foreign, onDiscard, onLoad, onApplied, onChecked }: {
+export function Changes({ session, ed, runs, foreign, focus, onDiscard, onLoad, onApplied, onChecked }: {
   session: Session; ed: Editor; runs: DiffRun[]; foreign: Foreign | null;
+  /** Which part the drawer was opened for: "profiles" scrolls to them. */
+  focus: null | 'review' | 'profiles';
   onDiscard: () => void; onLoad: (name: string, b: Uint8Array) => void;
   /** The stick now holds `stored`: take it as both the stored and the edited configuration. */
   onApplied: (stored: Uint8Array) => void;
@@ -28,11 +30,13 @@ export function Changes({ session, ed, runs, foreign, onDiscard, onLoad, onAppli
   const [checking, setChecking] = useState(false);
   const [drift, setDrift] = useState<{ stored: Uint8Array; runs: DiffRun[] } | null>(null);
   const file = useRef<HTMLInputElement>(null);
+  const profiles = useRef<HTMLElement>(null);
   const refusal = writeRefusal(session.original, ed.block);
   const busy = !!step || checking;
   const canWrite = session.source !== 'file' && runs.length > 0 && !refusal && !busy && (!foreign || anyway);
 
   useEffect(() => setAnyway(false), [foreign]);
+  useEffect(() => { if (focus === 'profiles') profiles.current?.scrollIntoView({ block: 'start' }); }, [focus]);
 
   function backup() {
     download(backupName(session), asCfg(session.original));
@@ -74,9 +78,11 @@ export function Changes({ session, ed, runs, foreign, onDiscard, onLoad, onAppli
   }
 
   const c = session.checked;
+  // nothing to review and nothing going on: the drawer is only for the stick and its profiles
+  const quiet = !runs.length && !refusal && !foreign && !step && !picked && !result;
   return (
     <>
-      <section className="panel">
+      {!quiet && <section className="panel">
         <h2>{runs.length ? `${runs.reduce((n, r) => n + r.end - r.start + 1, 0)} byte(s) will change` : 'No changes'}</h2>
         {/* warnings first: a long list of changes must not push them out of sight */}
         {refusal && <div className="note warn"><b>This cannot be written.</b> {refusal}</div>}
@@ -112,7 +118,7 @@ export function Changes({ session, ed, runs, foreign, onDiscard, onLoad, onAppli
             A backup of the current configuration is downloaded first{backedUp && ' (already saved)'}.
           </p>
         )}
-      </section>
+      </section>}
 
       {session.source !== 'file' && (
         <section className="panel">
@@ -144,7 +150,7 @@ export function Changes({ session, ed, runs, foreign, onDiscard, onLoad, onAppli
         </section>
       )}
 
-      <section className="panel">
+      <section className="panel" ref={profiles}>
         <h2>Profiles</h2>
         <p className="dim">Profiles are ordinary <code>.cfg</code> files, interchangeable with VKBDevCfg. A profile does not record which
           stick it came from, so the file names here do.</p>

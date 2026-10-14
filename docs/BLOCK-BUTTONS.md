@@ -608,6 +608,14 @@ four-way hat. Line 1 is also the one line that reads active at rest, which
 fits an encoder contact. Whether the firmware moves a grip's lines when its
 first-register field changes is not known either.
 
+**A1 on a mini-stick grip uses one line, not six.** The table's A1 rows (the
+four directions on 17–20 and "A1 push" on 34) are for a plain four-way hat
+fitted in that spot. On the left-hand stick, which has the analogue
+mini-stick, its owner could not make line 34 fire (button 30 from the
+factory) in any mini-stick mode, and the directions never closed lines
+17–20: in hat mode, hat 1 is made from the mini-stick's position (POV
+record 0), not from switches. The mini-stick's one click is line 13.
+
 ---
 
 ## 10. Worked example

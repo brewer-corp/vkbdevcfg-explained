@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '../App';
-import { GroupDef, Layer, MINI_STICK, MiniStick, RowDef, SCG_AXES, SCG_CHART, freeLine, hatIncludes, lineOf, miniStick, roleOf, rowSends, setLayered, setMiniStick, setRole,
-  shiftsInUse } from '../core/chart';
+import { Choice, GroupDef, Layer, MINI_CLICK, MINI_STICK, MiniStick, RowDef, SCG_AXES, SCG_CHART, choiceOf, hatIncludes, lineOf, miniStick, miniStickWay, roleOf,
+  rowSends, setButton, setChoice, setMiniStick, shiftsInUse } from '../core/chart';
 import { stickModel } from '../core/identity';
-import { HID_USAGES, LOGICAL_AXIS, LogicalChoice, logicalAxisBase, logicalEntry, logicalFunction, physicalEntry, physicalFunction, readField, setLogical } from '../core/schema';
+import { HID_USAGES, LOGICAL_AXIS, logicalAxisBase, logicalEntry, logicalFunction, physicalEntry, physicalFunction, readField } from '../core/schema';
 import type { Session } from '../session';
 import { CurveEditor } from './CurveEditor';
 import { Field } from './Field';
@@ -59,6 +59,10 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
   }, [hand, mount]);
 
   const line = (key: string) => lineOf(ed.controls, key);
+  const wired = (n: number) => ed.controls.has(n);
+  const click = line(MINI_CLICK), mode = click === null ? null : miniStick(ed.block, click, wired);
+  /** A direction of the mini-stick: no switch, just a position the stick turns into a hat direction or an axis. */
+  const stickWay = (group: GroupDef, row: RowDef) => group.id === 'a1' && row.key !== MINI_CLICK;
   // A row is lit while its switch is closed, or, for a hat direction, while the stick reports that hat pointing that
   // way. The second matters for an analogue mini-stick acting as a hat: it closes no switch at all.
   const lit = (key: string) => {
@@ -122,13 +126,18 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
             return <circle key={group.id} className={`spot ${on ? 'live' : ''} ${hover === group.id || picked?.group.id === group.id ? 'on' : ''}`} cx={hot[0]} cy={hot[1]} r={6}
               onMouseEnter={() => setHover(group.id)} onMouseLeave={() => setHover(null)} onClick={() => setSel({ kind: 'row', key: group.rows[0].key })} />;
           })}
-          {placed.groups.map(({ group, side, y }) => (
-            <g key={group.id} className="box" onMouseEnter={() => setHover(group.id)} onMouseLeave={() => setHover(null)}>
-              <rect className="title" x={x0(side)} y={y} width={COL.w} height={COL.title} />
-              <text className="title" x={x0(side) + COL.w / 2} y={y + 16} textAnchor="middle">{group.title}</text>
-              {group.rows.map((row, i) => renderRow(row, x0(side), y + COL.title + i * COL.row))}
-            </g>
-          ))}
+          {placed.groups.map(({ group, side, y }) => {
+            // the box lights with its circle on the drawing: selected or pointed at, or pressed
+            const on = hover === group.id || picked?.group.id === group.id, pressed = group.rows.some((r) => lit(r.key));
+            return (
+              <g key={group.id} className={`box ${on ? 'on' : ''} ${pressed ? 'live' : ''}`} onMouseEnter={() => setHover(group.id)} onMouseLeave={() => setHover(null)}>
+                <rect className="frame" x={x0(side) - 3} y={y - 3} width={COL.w + 6} height={COL.title + group.rows.length * COL.row + 4} />
+                <rect className="title" x={x0(side)} y={y} width={COL.w} height={COL.title} />
+                <text className="title" x={x0(side) + COL.w / 2} y={y + 16} textAnchor="middle">{group.title}</text>
+                {group.rows.map((row, i) => renderRow(group, row, x0(side), y + COL.title + i * COL.row))}
+              </g>
+            );
+          })}
           <g className="box">
             <rect className="title" x={x0(placed.axesSide)} y={placed.axesY} width={COL.w} height={COL.title} />
             <text className="title" x={x0(placed.axesSide) + COL.w / 2} y={placed.axesY + 16} textAnchor="middle">Axes</text>
@@ -164,17 +173,18 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
 
   // These three are plain functions, not components: defined in here they would be a new component type on every
   // render, and the inputs inside would lose focus at each keystroke.
-  function renderRow(row: RowDef, x: number, y: number) {
+  function renderRow(group: GroupDef, row: RowDef, x: number, y: number) {
     const l = line(row.key);
     if (l === null) return null;
     const sends = rowSends(ed.block, l, layer);
+    const text = stickWay(group, row) ? miniStickWay(row.label, mode, sends.text) : sends.text;
     const same = layer !== 0 && sends.via === l && roleOf(ed.block, l) === 'button';
     const cls = `row ${lit(row.key) ? 'live' : ''} ${sel?.kind === 'row' && sel.key === row.key ? 'sel' : ''} ${same ? 'same' : ''}`;
     return (
       <g key={row.key} className={cls} onClick={() => setSel({ kind: 'row', key: row.key })}>
         <rect x={x} y={y} width={COL.w} height={COL.row - 2} />
         <Glyph kind={row.glyph} x={x + 17} y={y + 10} />
-        <text className="name" x={x + 40} y={y + 14.5}>{sends.text}</text>
+        <text className="name" x={x + 40} y={y + 14.5}>{text}</text>
         {changed(l) && <circle className="dirty" cx={x + COL.w - 12} cy={y + 10} r={3.5} />}
       </g>
     );
@@ -184,63 +194,47 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
     if (sel?.kind !== 'row' || !picked) return null;
     const row = picked.group.rows.find((r) => r.key === sel.key)!;
     const l = line(row.key)!;
-    const role = roleOf(ed.block, l), sends = rowSends(ed.block, l, layer), p = physicalFunction(ed.block, l - 1);
-    const out = logicalFunction(ed.block, sends.via - 1);
-    const moved = layer !== 0 && sends.via !== l;
-    const canSet = sends.simple && (layer === 0 || moved);
-    const wired = (n: number) => ed.controls.has(n);
+    const sends = rowSends(ed.block, l, layer), p = physicalFunction(ed.block, l - 1);
+    const choice = choiceOf(ed.block, l, layer), out = logicalFunction(ed.block, sends.via - 1);
+    const held = LAYERS[layer].replace(' held', '');
     // the mini-stick's click is special: from the factory it is what turns the mini-stick from a hat into two axes
-    const mini = row.key === 'mini-stick.push' ? miniStick(ed.block, l, wired) : null;
+    const mini = row.key === MINI_CLICK ? mode : null, way = stickWay(picked.group, row);
+    const choose = (c: Choice) => ed.edit((b) => setChoice(b, ed.original, l, layer, c, wired));
     return (
       <>
         <h3>{picked.group.title} <span>{row.label}</span>
-          <em className={`pill ${live?.lines.has(l) ? 'ok' : ''}`}>{live?.lines.has(l) ? 'pressed' : `line ${l}`}</em></h3>
+          {!way && <em className={`pill ${live?.lines.has(l) ? 'ok' : ''}`}>{live?.lines.has(l) ? 'pressed' : `line ${l}`}</em>}</h3>
         {mini && layer === 0 && (
           <label className="ifield"><span>The mini-stick is</span>
             <select value={mini} onChange={(e) => ed.edit((b) => setMiniStick(b, ed.original, l, e.target.value as MiniStick, wired))}>
               {(Object.keys(MINI_STICK) as MiniStick[]).map((m) => <option key={m} value={m}>{MINI_STICK[m]}</option>)}
             </select></label>
         )}
-        {layer === 0 && role !== 'other' && !mini && (
-          <label className="ifield"><span>This control is</span>
-            <select value={role} onChange={(e) => ed.edit((b) => setRole(b, ed.original, l, e.target.value as 'button' | 'shift1' | 'shift2'))}>
-              <option value="button">a button</option>
-              <option value="shift1">the SHIFT1 key</option>
-              <option value="shift2">the SHIFT2 key</option>
-            </select></label>
-        )}
-        {role === 'other' && !mini && <p className="dim">{p.kind}{p.detail ? `: ${p.detail}` : ''}. This kind of control is edited under the hood for now.</p>}
-        {mini && layer === 0 && <p className="dim">{mini.startsWith('toggle')
-          ? 'Pressing the mini-stick in switches it between a hat and two axes. To use the press for something else, pick one of the “always” choices.'
-          : 'Pressing the mini-stick in is an ordinary button.'}</p>}
-        {role !== 'button' && role !== 'other' && (
-          <p className="dim">While it is held, every button can send something else: switch to the “{LAYERS[role === 'shift1' ? 1 : 2]}” layer above to set that up. It sends nothing itself.</p>
-        )}
-        {role === 'button' && layer !== 0 && !moved && (
-          <>
-            <p className="dim">With {LAYERS[layer].replace(' held', '')} held this sends the same as normal: <b>{sends.text}</b>.</p>
-            <button className="btn" onClick={() => ed.edit((b) => {
-              const spare = freeLine(b, wired);
-              if (spare) { setLayered(b, l, layer as 1 | 2, spare); setLogical(b, spare - 1, 'auto'); }
-            })}>Send something else on this layer</button>
-          </>
-        )}
-        {role === 'button' && canSet && (
-          <label className="ifield"><span>{layer ? `With ${LAYERS[layer].replace(' held', '')} it sends` : 'It sends'}</span>
+        {mini?.startsWith('toggle') && <p className="dim">Pressing it in switches the mini-stick between a hat and two axes, and sends nothing
+          {layer ? `, whatever is held` : ''}. To use the press for something else, pick one of the “always” choices.</p>}
+        {way && <p className="dim">The mini-stick closes no switch as it moves: the stick turns its position into {mode === 'axes' ? 'an axis value'
+          : mode === 'hat' ? 'a hat direction' : 'a hat direction or an axis value, depending on the mode'}. Choose the mode on the mini-stick’s push.</p>}
+        {choice !== null && !way && (
+          <label className="ifield"><span>{layer ? `With ${held} held, it should be` : row.key === MINI_CLICK ? 'The push should be' : 'This button should be'}</span>
             <span className="sends">
-              <select value={out.auto ? 'auto' : out.kind === 'Button' ? 'button' : 'none'}
-                onChange={(e) => ed.edit((b) => setLogical(b, sends.via - 1, e.target.value as LogicalChoice, out.button ?? sends.via))}>
-                <option value="button">button</option>
-                {!moved && <option value="auto">button {sends.via} (its line number)</option>}
+              <select value={choice} onChange={(e) => choose(e.target.value as Choice)}>
+                {layer !== 0 && <option value="same">as normal ({rowSends(ed.block, l, 0).text})</option>}
+                <option value="button">a button</option>
+                {layer === 0 && <option value="shift1">the SHIFT1 key</option>}
+                {layer === 0 && <option value="shift2">the SHIFT2 key</option>}
                 <option value="none">nothing</option>
               </select>
-              {out.kind !== 'No function' && <input type="number" min={1} max={127} disabled={out.auto && !moved} value={out.button ?? ''}
-                onChange={(e) => e.target.value !== '' && ed.edit((b) => setLogical(b, sends.via - 1, 'button', Math.max(1, Math.min(127, +e.target.value))))} />}
+              {choice === 'button' && <input type="number" min={1} max={127} value={out.button ?? ''} aria-label="Button number"
+                onChange={(e) => e.target.value !== '' && ed.edit((b) => setButton(b, ed.original, l, layer, Math.max(1, Math.min(127, +e.target.value))))} />}
             </span></label>
         )}
-        {role === 'button' && !sends.simple && <p className="dim">Sends <b>{sends.text}</b>. Outputs other than joystick buttons are edited under the hood for now.</p>}
-        {moved && <button className="btn ghost" onClick={() => ed.edit((b) => setLayered(b, l, layer as 1 | 2, null))}>Same as normal again</button>}
-        {changed(l) && layer === 0 && !mini && (
+        {(choice === 'shift1' || choice === 'shift2') && (
+          <p className="dim">It sends nothing itself. While it is held, every button can send something else: switch to the “{LAYERS[choice === 'shift1' ? 1 : 2]}” layer above to set that up.</p>
+        )}
+        {choice === null && !mini && !way && (
+          <p className="dim">{roleOf(ed.block, l) === 'button' ? `Sends ${sends.text}.` : `${p.kind}${p.detail ? `: ${p.detail}` : ''}.`} This kind of control is edited under the hood for now.</p>
+        )}
+        {changed(l) && layer === 0 && !mini && !way && (
           <button className="btn ghost" onClick={() => ed.edit((b) => { for (const o of [physicalEntry(l - 1), logicalEntry(l - 1)]) b.set(ed.original.subarray(o, o + 2), o); })}>Undo changes to this control</button>
         )}
       </>
@@ -278,6 +272,5 @@ function Glyph({ kind, x, y }: { kind: string; x: number; y: number }) {
   if (kind === 'left') return tri(270);
   if (kind === 'dot') return <circle className="glyph" cx={x} cy={y} r={4} />;
   if (kind === 'push') return <><circle className="glyph ring" cx={x} cy={y} r={5} /><circle className="glyph" cx={x} cy={y} r={2} /></>;
-  if (kind === 'click') return <><circle className="glyph ring" cx={x} cy={y} r={5.5} /><circle className="glyph ring" cx={x} cy={y} r={2.5} /></>;
   return <text className="glyph" x={x} y={y + 4.5} textAnchor="middle">{kind}</text>;
 }

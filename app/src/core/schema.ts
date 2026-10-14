@@ -3,7 +3,7 @@
 // `conf` says how far to trust a field. 'verified' means its effect was observed on a real
 // stick: the field was changed and the stick's HID descriptor or input report changed the way
 // the name predicts (docs/BLOCK-AXES.md records each observation). 'static' is a reading of
-// the vendor tool's code only. The UI lets static fields be edited only in experimental mode.
+// the vendor tool's code only. The UI asks before the first change to a static field.
 
 export type Confidence = 'verified' | 'static';
 

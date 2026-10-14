@@ -7,7 +7,23 @@ import { Session, forgetUnchecked } from '../session';
 import { stickModel } from '../core/identity';
 import { extRegisters } from '../core/wiring';
 
-export function Overview({ session, ed, go, changed }: { session: Session; ed: Editor; go: () => void; changed: number }) {
+/** A write from an earlier visit that was never read back: whether this stick holds it. */
+export function LateWrite({ session }: { session: Session }) {
+  const [late, setLate] = useState(session.late);
+  if (!late) return null;
+  return (
+    <div className={`note ${late.ok ? 'ok' : 'warn'}`}>
+      {late.ok
+        ? <><b>The earlier write lasted.</b> A configuration written at {late.writtenAt.toLocaleTimeString()} was never read back at the time. This stick holds it.</>
+        : <><b>An earlier write is unaccounted for.</b> A configuration written at {late.writtenAt.toLocaleTimeString()} was never read back, and this
+            stick does not hold it. If this is a different stick, connect the one you wrote to. Otherwise the write did not last.
+            <div className="row"><button className="btn" onClick={() => { forgetUnchecked(); setLate(undefined); }}>Dismiss</button></div></>}
+    </div>
+  );
+}
+
+/** What the stick is and how it is set up, under the chart. */
+export function Overview({ session, ed }: { session: Session; ed: Editor }) {
   const b = ed.block;
   const f = (k: string) => LOGICAL_AXIS.find((d) => d.key === k)!;
   const axes = [...Array(AXIS_SLOTS).keys()].filter((n) => readField(b, logicalAxisBase(n), f('en')))
@@ -16,19 +32,9 @@ export function Overview({ session, ed, go, changed }: { session: Session; ed: E
   const leds = [...Array(LED_EVENT_MAX).keys()].filter((i) => !ledEvent(b, i).empty).length;
   const ext = [...Array(8).keys()].map((i) => extDevice(b, i)).filter((d) => d.type !== 0);
 
-  const [late, setLate] = useState(session.late);
   const model = stickModel(b, session.productId);
   return (
-    <>
-      {late && (
-        <div className={`note ${late.ok ? 'ok' : 'warn'}`}>
-          {late.ok
-            ? <><b>The earlier write lasted.</b> A configuration written at {late.writtenAt.toLocaleTimeString()} was never read back at the time. This stick holds it.</>
-            : <><b>An earlier write is unaccounted for.</b> A configuration written at {late.writtenAt.toLocaleTimeString()} was never read back, and this
-                stick does not hold it. If this is a different stick, connect the one you wrote to. Otherwise the write did not last.
-                <div className="row"><button className="btn" onClick={() => { forgetUnchecked(); setLate(undefined); }}>Dismiss</button></div></>}
-        </div>
-      )}
+    <div className="about">
       <div className="stats">
         <Stat k="Model type" v={`0x${typeId(b).toString(16)}`} />
         {session.productId !== undefined && <Stat k="USB ID" v={`231d:${session.productId.toString(16).padStart(4, '0')}`} />}
@@ -50,18 +56,18 @@ export function Overview({ session, ed, go, changed }: { session: Session; ed: E
       <section className="panel">
         <h2>How editing works here</h2>
         <ol>
-          <li>Change settings on the other tabs. Nothing is sent while you edit.</li>
-          <li><b>Review &amp; apply</b> shows exactly which bytes will change, saves a backup, and writes once.</li>
+          <li>Click a control on the chart, or press it on the stick, and choose what it does. The other tabs have the
+            settings the chart does not show. Nothing is sent while you edit.</li>
+          <li><b>Review &amp; write</b> shows exactly which bytes will change, saves a backup, and writes once.</li>
           <li>The stick restarts for about three seconds, then the tool reads it back to check.</li>
         </ol>
         <p className="dim">
           Most settings here have been changed on a real stick and their effect seen. The few marked
-          <em className="pill unsure">unverified</em> come only from reading the vendor tool’s code, and are locked unless
-          you turn on <b> Experimental fields</b>. The stick does not check what it is given — this tool is the only guard.
+          <em className="pill unsure">unverified</em> come only from reading the vendor tool’s code, and changing one asks
+          you first. The stick does not check what it is given — this tool is the only guard.
         </p>
-        {changed > 0 && <button className="btn" onClick={go}>Review {changed} changed byte{changed > 1 ? 's' : ''}</button>}
       </section>
-    </>
+    </div>
   );
 }
 

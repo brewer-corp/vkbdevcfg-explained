@@ -73,6 +73,15 @@ a:hover { color: #000; background: var(--accent); border-bottom-color: var(--acc
 .topbar nav a:hover { background: var(--accent); color: #000; }
 .topbar nav a.here { color: var(--accent); border-bottom-color: var(--accent); }
 .topbar nav a.here:hover { color: #000; }
+/* the tool is the thing most visitors want: first, and framed */
+.topbar nav a.tool { color: var(--accent); border: 1px solid var(--accent); border-bottom-width: 1px; margin-right: 8px; }
+.topbar nav a.tool:hover { color: #000; }
+/* off-site links: an arrow out of a box, drawn rather than typed (arrow characters are missing from too many fonts) */
+.topbar nav a.ext::after {
+  content: ""; display: inline-block; width: 9px; height: 9px; margin-left: 6px; vertical-align: -1px; background: currentColor;
+  -webkit-mask: var(--out) center / contain no-repeat; mask: var(--out) center / contain no-repeat;
+}
+:root { --out: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.6'%3E%3Cpath d='M5 1.5H1.5v9h9V7M7 1h4v4M11 1 5.5 6.5'/%3E%3C/svg%3E"); }
 
 /* ---------- layout ---------- */
 
@@ -307,6 +316,11 @@ mark { background: var(--accent); color: #000; padding: 0 2px; }
   padding: 9px 16px; cursor: pointer; display: inline-block;
 }
 .btn:hover { background: var(--accent); color: #000; }
+.btn.primary { background: var(--accent); color: #000; }
+.btn.primary:hover { background: var(--accent-hot); }
+.cta { display: flex; align-items: center; gap: 12px 22px; flex-wrap: wrap; max-width: none; margin: 28px 0 30px; color: var(--fg-dim); font-size: 15px; }
+.cta .btn { font-size: 12px; padding: 13px 22px; white-space: nowrap; }
+.cta span { flex: 1 1 30ch; max-width: 46ch; }
 
 kbd, kbd.key {
   background: #000; border: 1px solid var(--accent); padding: 1px 7px;

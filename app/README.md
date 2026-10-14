@@ -35,12 +35,16 @@ change it. There is a row for each axis too, with its live value, deadzones and 
 - **Layers.** Any button can be made the SHIFT1 or SHIFT2 key. The layer switch above the chart
   then shows what every other control sends while it is held, and a control can be given its own
   output there. The stick does that through a spare line; the chart picks one and never shows it.
-- **The mini-stick.** From the factory its click switches it between a hat and two axes. Its row
-  offers the other arrangements: always a hat, or always axes, with the click freed to be a button.
+- **The mini-stick.** From the factory its click switches it between a hat and two axes. Its push
+  row offers the other arrangements: always a hat, or always axes, with the click freed to be a
+  button or a shift key. VKB's tables also give A1 a push on line 34 and directions on 17–20; those
+  are a plain hat's, which a mini-stick grip does not have, so the chart leaves them out.
+- **One choice per control:** "This button should be" a button (with its number), the SHIFT1 or
+  SHIFT2 key, or nothing; on a shift layer, the same as normal, a button, or nothing.
 - **What it does not edit yet:** hats, keys and the rarer functions (they are shown, and edited
   on the table tabs), LEDs, calibration.
 - **Applying** is a bar along the bottom and a drawer: the list of changed bytes, the write, the
-  check, and profiles.
+  check, and profiles. The bar also says what is connected; the site's own navigation has the top.
 
 The chart exists for a Gladiator EVO with an SCG grip. Other hardware gets the tables.
 
@@ -55,11 +59,13 @@ photo of any other stick against a plain background goes through the first scrip
 browser is an unplug. Chrome keeps a site's permission across an unplug only for devices that
 report a USB serial number, and these sticks report none. So the tool waits a few seconds, and
 if the stick is not offered back it shows a **Pick the stick again** button; the write has
-already happened by then, and picking the stick lets the tool read it back and check.
+already happened by then, and picking the stick lets the tool read it back and check. The
+**Reconnect** button on the first screen needs no prompt because nothing was unplugged: Chrome
+keeps the permission for as long as the browser runs and the stick stays connected.
 
 **Checking that a write lasted.** Every write is read back after the stick has restarted, so what
-is compared is what the stick loaded from its own storage. **Check the stick now**, on the Review
-tab, repeats that read at any time — after unplugging the stick, say, or after another program
+is compared is what the stick loaded from its own storage. **Check the stick now**, in the drawer
+that **Profiles** opens, repeats that read at any time — after unplugging the stick, say, or after another program
 has been at it — and lists any bytes that differ from what the page last read or wrote. If a
 write is accepted but the read-back never happens (the tab was closed, the stick was not picked
 again), the page remembers what it wrote and says, the next time a stick is connected, whether
@@ -69,7 +75,7 @@ that stick holds it.
 number, and sticks of one family share a type id, so the left stick's profile loads onto the
 right stick without complaint. Two things in it do belong to one stick: the calibration, and the
 grip it is set up for. When a loaded profile differs from the connected stick in either, the
-Review tab says so and will not write until that is acknowledged. File names of saved profiles
+review says so and will not write until that is acknowledged. File names of saved profiles
 carry the stick's name for the same reason.
 
 **A stale connection never answers.** After a stick has restarted or been replugged, Chrome
@@ -103,9 +109,9 @@ block carrying the wrong model ID. So the checks are here.
 - A backup `.cfg` is downloaded before every write.
 - A block for another model or firmware is refused.
 - After the stick restarts, the block is read back and compared.
-- Fields are editable only if marked `verified` in the schema — changed on a
-  real stick, with the predicted effect observed. Everything else is locked unless **Experimental
-  fields** is switched on.
+- Fields are marked `verified` in the schema only if they were changed on a real stick, with the
+  predicted effect observed. Changing any other field first shows a red warning that has to be
+  accepted; it then stays unlocked until the page is reloaded.
 
 Used on two sticks so far, a Gladiator EVO R and a Gladiator Omni L, both on firmware 2.20.C. See
 [`../docs/PROTOCOL.md`](../docs/PROTOCOL.md).

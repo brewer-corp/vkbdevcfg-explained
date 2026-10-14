@@ -3,7 +3,7 @@ import { diffBlocks } from './core/block';
 import { webHidAvailable } from './core/webhid';
 import { Control, wiring } from './core/wiring';
 import { Session, connectDemo, connectDevice, grantedSticks, openFile } from './session';
-import { Overview } from './ui/Overview';
+import { LateWrite, Overview } from './ui/Overview';
 import { Axes } from './ui/Axes';
 import { Buttons } from './ui/Buttons';
 import { Leds } from './ui/Leds';
@@ -13,9 +13,10 @@ import { foreignSigns } from './core/identity';
 import { Live, useLive } from './ui/Live';
 import { Chart } from './ui/Chart';
 import { chartFits } from './core/chart';
+import type { Confidence } from './core/schema';
 
 // The chart is the app; the rest are the same settings as tables, for what the chart does not cover.
-const TABS = ['Stick', 'Overview', 'Axes', 'Buttons', 'LEDs', 'Live', 'Block'] as const;
+const TABS = ['Stick', 'Axes', 'Buttons', 'LEDs', 'Live', 'Block'] as const;
 type Tab = (typeof TABS)[number];
 
 /** ?tab=axes opens on that tab (used by tests and for deep links). */
@@ -24,13 +25,12 @@ function initialTab(): Tab {
   return (t && TABS.find((x) => x.toLowerCase().startsWith(t.toLowerCase()))) || 'Stick';
 }
 
-/** Passed to every editor: the working block, a way to change it, and whether a field may be edited. */
+/** Passed to every editor: the working block and a way to change it. */
 export interface Editor {
   block: Uint8Array;
   original: Uint8Array;
-  edit: (mutate: (b: Uint8Array) => void) => void;
-  canEdit: (conf: 'verified' | 'static') => boolean;
-  experimental: boolean;
+  /** Change the working block. A change to an unverified field (`static`) asks first, once per page load. */
+  edit: (mutate: (b: Uint8Array) => void, conf?: Confidence) => void;
   /** The vendor's name for the control on each line (1-based), where it has one. */
   controls: Map<number, Control>;
 }
@@ -38,13 +38,15 @@ export interface Editor {
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [block, setBlock] = useState<Uint8Array | null>(null);
-  const [tab, setTab] = useState<Tab>('Overview');
-  const [experimental, setExperimental] = useState(false);
+  const [tab, setTab] = useState<Tab>('Stick');
+  // ?experimental skips the question, for tests
+  const [unlocked, setUnlocked] = useState(() => new URLSearchParams(location.search).has('experimental'));
+  const [asking, setAsking] = useState<null | ((b: Uint8Array) => void)>(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [known, setKnown] = useState<HIDDevice[]>([]);
   const [foreign, setForeign] = useState<Foreign | null>(null);
-  const [review, setReview] = useState(() => new URLSearchParams(location.search).has('review'));
+  const [drawer, setDrawer] = useState<null | 'review' | 'profiles'>(() => (new URLSearchParams(location.search).has('review') ? 'review' : null));
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => { grantedSticks().then(setKnown).catch(() => {}); }, []);
@@ -63,7 +65,6 @@ export function App() {
     const q = new URLSearchParams(location.search);
     if (q.has('demo')) start(() => connectDemo(q.has('forget')), 'Opening the demo…');
     else if (q.has('auto')) grantedSticks().then((d) => d[0] && start(() => connectDevice(d[0]), 'Reading the stick…'));
-    if (q.has('experimental')) setExperimental(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -116,25 +117,18 @@ export function App() {
     );
   }
 
+  const change = (mutate: (b: Uint8Array) => void) => { const next = new Uint8Array(block); mutate(next); setBlock(next); };
   const editor: Editor = {
-    block, original: session.original, experimental, controls: wiring(block, session.productId),
-    edit: (mutate) => { const next = new Uint8Array(block); mutate(next); setBlock(next); },
-    canEdit: (conf) => conf === 'verified' || experimental,
+    block, original: session.original, controls: wiring(block, session.productId),
+    edit: (mutate, conf = 'verified') => (conf === 'verified' || unlocked ? change(mutate) : setAsking(() => mutate)),
   };
+  const discard = () => { setBlock(new Uint8Array(session.original)); setForeign(null); };
 
   const charted = chartFits(editor.controls);
 
   return (
     <div className="shell">
-      <Top>
-        <span className={`src src-${session.source}`}>{session.source === 'device' ? 'Connected' : session.source === 'demo' ? 'Demo' : 'File'}</span>
-        <span className="devname">{session.name}</span>
-        <label className="toggle" title="Allow editing fields whose meaning comes only from reading the vendor tool's code">
-          <input type="checkbox" checked={experimental} onChange={(e) => setExperimental(e.target.checked)} />
-          Experimental fields
-        </label>
-        <button className="btn ghost" onClick={() => { session.transport?.close(); setSession(null); setBlock(null); }}>Disconnect</button>
-      </Top>
+      <Top />
       <nav className="tabs">
         {TABS.map((t) => (
           <button key={t} className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>
@@ -143,11 +137,14 @@ export function App() {
         ))}
       </nav>
       <main className={`page ${tab === 'Stick' ? 'wide' : ''}`}>
-        {tab === 'Stick' && (charted
-          ? <Chart session={session} ed={editor} live={live} />
-          : <p className="intro">There is no drawing for this hardware yet: the chart covers a Gladiator EVO with an SCG grip.
-              Everything is still editable on the other tabs.</p>)}
-        {tab === 'Overview' && <Overview session={session} ed={editor} go={() => setReview(true)} changed={changedBytes} />}
+        {tab === 'Stick' && <>
+          <LateWrite session={session} />
+          {charted
+            ? <Chart session={session} ed={editor} live={live} />
+            : <p className="intro">There is no drawing for this hardware yet: the chart covers a Gladiator EVO with an SCG grip.
+                Everything is still editable on the other tabs.</p>}
+          <Overview session={session} ed={editor} />
+        </>}
         {tab === 'Axes' && <Axes ed={editor} />}
         {tab === 'Buttons' && <Buttons ed={editor} live={live} />}
         {tab === 'Live' && <Live ed={editor} live={live} />}
@@ -156,13 +153,13 @@ export function App() {
       </main>
       {/* Review, write, check and profiles live in a drawer over whichever tab is open. It stays mounted while closed:
           a write in progress keeps its state. */}
-      <aside className={`drawer ${review ? 'open' : ''}`} aria-hidden={!review}>
+      <aside className={`drawer ${drawer ? 'open' : ''}`} aria-hidden={!drawer}>
         <div className="drawerhead">
-          <b>{changedBytes ? 'Review and write' : 'The stick and its profiles'}</b>
-          <button className="btn ghost" onClick={() => setReview(false)}>Close</button>
+          <b>{changedBytes && drawer !== 'profiles' ? 'Review and write' : 'Profiles'}</b>
+          <button className="btn ghost" onClick={() => setDrawer(null)}>Close</button>
         </div>
-        <Changes session={session} ed={editor} runs={changes} foreign={foreign}
-          onDiscard={() => { setBlock(new Uint8Array(session.original)); setForeign(null); }}
+        <Changes session={session} ed={editor} runs={changes} foreign={foreign} focus={drawer}
+          onDiscard={discard}
           onLoad={(name, b) => {
             // Sticks of one family share a type id, so a profile from the other hand's stick loads without complaint.
             const signs = session.source === 'file' ? [] : foreignSigns(session.original, b);
@@ -171,28 +168,72 @@ export function App() {
           onApplied={(stored) => { session.original = stored; setSession({ ...session }); setBlock(new Uint8Array(stored)); setForeign(null); }}
           onChecked={() => setSession({ ...session })} />
       </aside>
+      {/* what is connected, and what has changed: everything about the stick sits down here, the site's bar on top */}
       <footer className={`applybar ${changedBytes ? 'dirty' : ''}`}>
-        <span>
-          {changedBytes ? <><b>{changedBytes} byte{changedBytes > 1 ? 's' : ''} changed</b> — nothing is sent until you write.</>
-            : session.source === 'file' ? 'Opened from a file.'
-            : session.checked?.how === 'write' ? `Written and read back at ${session.checked.at.toLocaleTimeString()}.`
-            : 'The stick holds what is on screen.'}
+        <span className="row">
+          <span className={`src src-${session.source}`}>{session.source === 'device' ? 'Connected' : session.source === 'demo' ? 'Demo' : 'File'}</span>
+          <span className="devname">{session.name}</span>
+          <span>
+            {changedBytes ? <><b>{changedBytes} byte{changedBytes > 1 ? 's' : ''} changed</b> — nothing is sent until you write.</>
+              : session.source === 'file' ? 'Opened from a file.'
+              : session.checked?.how === 'write' ? `Written and read back at ${session.checked.at.toLocaleTimeString()}.`
+              : 'The stick holds what is on screen.'}
+          </span>
           {foreign && <em className="pill warn">from another stick</em>}
         </span>
         <span className="row">
-          {changedBytes > 0 && <button className="btn ghost" onClick={() => { setBlock(new Uint8Array(session.original)); setForeign(null); }}>Discard</button>}
-          <button className={`btn ${changedBytes ? 'primary' : ''}`} onClick={() => setReview(!review)}>{changedBytes ? 'Review & write' : 'Check & profiles'}</button>
+          <button className="btn ghost" onClick={() => { session.transport?.close(); setSession(null); setBlock(null); setDrawer(null); }}>
+            {session.source === 'device' ? 'Disconnect' : 'Close'}</button>
+          <button className="btn" onClick={() => setDrawer(drawer === 'profiles' ? null : 'profiles')}>Profiles</button>
+          {changedBytes > 0 && <button className="btn ghost" onClick={discard}>Discard</button>}
+          {changedBytes > 0 && <button className="btn primary" onClick={() => setDrawer(drawer === 'review' ? null : 'review')}>Review &amp; write</button>}
         </span>
       </footer>
+      {asking && <Unverified onCancel={() => setAsking(null)} onAccept={() => { setUnlocked(true); change(asking); setAsking(null); }} />}
     </div>
   );
 }
 
-function Top({ children }: { children?: React.ReactNode }) {
+const REPO = 'https://github.com/spadaval/vkbdevcfg-explained';
+
+/** The site's own bar, so the tool is one page of the site rather than a dead end. */
+function Top() {
   return (
-    <header className="top">
-      <a className="mark" href="../">VKB <b>// Config</b></a>
-      <div className="topright">{children}</div>
+    <header className="topbar">
+      <a className="mark" href="../">VKBDevCfg <b>// Explained</b></a>
+      <nav>
+        <a className="tool here" href="./">Config tool</a>
+        <a href="../">Debrief</a>
+        <a href="../guide.html">Pilot's guide</a>
+        <a className="ext" href={`${REPO}/tree/master/docs`} target="_blank" rel="noopener">Technical docs</a>
+        <a className="ext" href={REPO} target="_blank" rel="noopener">Source</a>
+      </nav>
     </header>
+  );
+}
+
+/** Asked before the first change to a field whose meaning was only read out of the vendor's program. */
+function Unverified({ onCancel, onAccept }: { onCancel: () => void; onAccept: () => void }) {
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    addEventListener('keydown', key);
+    return () => removeEventListener('keydown', key);
+  }, [onCancel]);
+  return (
+    <div className="scrim" onClick={onCancel}>
+      <div className="danger" role="alertdialog" aria-modal="true" aria-labelledby="danger-title" onClick={(e) => e.stopPropagation()}>
+        <h2 id="danger-title">Unverified setting</h2>
+        <p><b>Nobody has changed this setting on a real stick and watched what happens.</b> What it means was worked out from
+          VKB’s own program, and that reading could be wrong.</p>
+        <p>The stick does not check what it is given. A wrong value can make it misbehave or stop responding, and at worst
+          leave it unusable. This tool cannot undo that for you, and nobody here will be able to either.</p>
+        <p>A backup of the stick is saved before every write, but a backup only helps while the stick still accepts one.</p>
+        <div className="row">
+          <button className="btn" autoFocus onClick={onCancel}>Leave it alone</button>
+          <button className="btn risky" onClick={onAccept}>I accept the risk: unlock unverified settings</button>
+        </div>
+        <p className="dim">They stay unlocked until this page is reloaded.</p>
+      </div>
+    </div>
   );
 }

@@ -3,25 +3,32 @@
 import { logicalEntry, logicalFunction, physicalEntry, physicalFunction, setLogical } from './schema';
 import type { Control } from './wiring';
 
-/** `glyph` is one of the drawn marks (up, down, left, right, push, click, dot) or a short text such as "F1". */
+/** `glyph` is one of the drawn marks (up, down, left, right, push, dot) or a short text such as "F1". */
 export interface RowDef { key: string; glyph: string; label: string }
 export interface GroupDef { id: string; title: string; rows: RowDef[] }
 
-const way = (id: string, extra: RowDef[] = []): RowDef[] => [
-  { key: `${id}.push`, glyph: 'push', label: 'push' }, { key: `${id}.up`, glyph: 'up', label: 'up' }, { key: `${id}.down`, glyph: 'down', label: 'down' },
-  { key: `${id}.left`, glyph: 'left', label: 'left' }, { key: `${id}.right`, glyph: 'right', label: 'right' }, ...extra,
+/** The mini-stick's click, the one push A1 has. */
+export const MINI_CLICK = 'mini-stick.push';
+
+const way = (id: string, push = `${id}.push`): RowDef[] => [
+  { key: push, glyph: 'push', label: 'push' }, { key: `${id}.up`, glyph: 'up', label: 'up' }, { key: `${id}.down`, glyph: 'down', label: 'down' },
+  { key: `${id}.left`, glyph: 'left', label: 'left' }, { key: `${id}.right`, glyph: 'right', label: 'right' },
 ];
 
 /**
  * A Gladiator EVO with an SCG grip, in two columns. `inner` is the side the grip's hats face: the left column for a
  * left-hand stick, the right column for a right-hand one.
+ *
+ * A1 is the mini-stick, and its push is the mini-stick's own click (line 13). VKB's tables also give A1 a push on
+ * line 34, for a plain four-way hat fitted in that spot; on a mini-stick grip nothing closes it (tried on a left-hand
+ * stick, in every mini-stick mode), so it is not drawn.
  */
 export const SCG_CHART: { inner: GroupDef[]; outer: GroupDef[] } = {
   inner: [
     { id: 'b1', title: 'B1 · side button', rows: [{ key: 'b1', glyph: 'dot', label: 'press' }] },
     { id: 'a4', title: 'A4 · top hat', rows: way('a4') },
     { id: 'a3', title: 'A3 · centre hat', rows: way('a3') },
-    { id: 'a1', title: 'A1 · mini-stick', rows: way('a1', [{ key: 'mini-stick.push', glyph: 'click', label: 'stick click' }]) },
+    { id: 'a1', title: 'A1 · mini-stick', rows: way('a1', MINI_CLICK) },
     { id: 'f', title: 'Base buttons', rows: [{ key: 'f2', glyph: 'F2', label: 'F2' }, { key: 'f1', glyph: 'F1', label: 'F1' }, { key: 'f3', glyph: 'F3', label: 'F3' }] },
     { id: 'sw1', title: 'Sw1 · base switch', rows: [{ key: 'sw1.up', glyph: 'up', label: 'up' }, { key: 'sw1.down', glyph: 'down', label: 'down' }] },
   ],
@@ -109,7 +116,7 @@ export function rowSends(block: Uint8Array, line: number, layer: Layer = 0): Sen
   }
   if (p.kind === 'Encoder') { const via = ((b1 + 1) & 0x7f) || line; return { ...output(block, via), via, simple: false }; }
   if (p.kind === 'POV switch') { const [hat, dir] = p.detail.split(', '); return { text: `${title(hat)} ${dir}`, via: line, simple: false, hat: { n: +hat.slice(4), dir } }; }
-  if (p.kind === 'uStick switch') return { text: 'Switches it: hat or axes', via: line, simple: false };
+  if (p.kind === 'uStick switch') return { text: 'Switches hat / axes', via: line, simple: false };
   if (p.kind === 'No function') return { text: 'nothing', via: line, simple: false };
   if (p.kind === 'SHIFT') { const [which, ...how] = p.detail.split(' + '); return { text: `${which} key${how.length ? ` (${how.join(', ')})` : ''}`, via: line, simple: false }; }
   return { text: p.detail ? `${p.kind}: ${p.detail}` : p.kind, via: line, simple: false };
@@ -145,6 +152,84 @@ export function setRole(block: Uint8Array, original: Uint8Array, line: number, r
   const at = physicalEntry(line - 1);
   if (role === 'button') block.set(original[at] & 0x80 ? original.subarray(at, at + 2) : PLAIN, at);
   else block.set([role === 'shift1' ? 0x49 : 0x4a, 0xff], at);
+}
+
+// ---------------------------------------------------------------- one control, one choice ---
+
+/** What a control should be, as the chart offers it. `same` is for a shift layer: send what it sends normally. */
+export type Choice = 'button' | 'shift1' | 'shift2' | 'none' | 'same';
+
+const sendsButton = (block: Uint8Array, line: number) => { const k = logicalFunction(block, line - 1).kind; return k === 'Button' || k === 'Auto'; };
+
+/** Null when the control does something the chart cannot set (a hat direction, a dial, a keyboard key). */
+export function choiceOf(block: Uint8Array, line: number, layer: Layer): Choice | null {
+  const role = roleOf(block, line);
+  if (role === 'shift1' || role === 'shift2') return layer === 0 ? role : null;
+  if (role !== 'button') return null;
+  const sends = rowSends(block, line, layer);
+  if (layer !== 0 && sends.via === line) return 'same';
+  if (!sends.simple) return null;
+  return sendsButton(block, sends.via) ? 'button' : 'none';
+}
+
+/**
+ * Make the control a button, a shift key or nothing; on a shift layer, give it its own output on a spare line (or take
+ * that away with `same`). A control that becomes a button again gets back the number it had, or the lowest free one.
+ */
+export function setChoice(block: Uint8Array, original: Uint8Array, line: number, layer: Layer, choice: Choice, wired: (line: number) => boolean): void {
+  if (layer === 0) {
+    if (choice === 'shift1' || choice === 'shift2') { setRole(block, original, line, choice); return; }
+    if (choice === 'same') return;
+    if (roleOf(block, line) !== 'button') setRole(block, original, line, 'button');
+    if (choice === 'none') setLogical(block, line - 1, 'none');
+    else if (!sendsButton(block, line)) {
+      const at = logicalEntry(line - 1);
+      if (sendsButton(original, line)) block.set(original.subarray(at, at + 2), at);
+      else setLogical(block, line - 1, 'button', freeButton(block, line, wired));
+    }
+    return;
+  }
+  if (choice === 'same') { setLayered(block, line, layer, null); return; }
+  if (choice !== 'button' && choice !== 'none') return;
+  let via = rowSends(block, line, layer).via, fresh = false;
+  if (via === line) {
+    const spare = freeLine(block, wired);
+    if (!spare) return;
+    setLayered(block, line, layer, spare); via = spare; fresh = true;
+  }
+  if (choice === 'none') setLogical(block, via - 1, 'none');
+  else if (fresh || !sendsButton(block, via)) setLogical(block, via - 1, 'button', freeButton(block, via, wired));
+}
+
+/** Set the joystick button a control sends with the given shift held. */
+export function setButton(block: Uint8Array, original: Uint8Array, line: number, layer: Layer, button: number): void {
+  const via = rowSends(block, line, layer).via, at = logicalEntry(via - 1);
+  // the factory says "its own number" as FF FF: typing that number back restores those bytes, not an equivalent pair
+  if (button === via && logicalFunction(original, via - 1).auto) block.set(original.subarray(at, at + 2), at);
+  else setLogical(block, via - 1, 'button', button);
+}
+
+/** Lines something can make active: the wired ones, and the spare lines buttons act as while a shift is held. */
+function reachable(block: Uint8Array, wired: (line: number) => boolean): Set<number> {
+  const out = new Set<number>();
+  for (let l = 1; l <= 128; l++) {
+    if (!wired(l)) continue;
+    out.add(l);
+    const at = physicalEntry(l - 1);
+    if (block[at] & 0x80) for (const s of [block[at] & 0x7f, block[at + 1] & 0x7f]) if (s !== 0x7f) out.add(s + 1);
+  }
+  return out;
+}
+
+/** The lowest joystick button no other line sends. A line left on "its own number" counts only if it can be pressed. */
+export function freeButton(block: Uint8Array, except: number, wired: (line: number) => boolean): number {
+  const reach = reachable(block, wired), used = new Set<number>();
+  for (let l = 1; l <= 128; l++) {
+    const f = logicalFunction(block, l - 1);
+    if (l !== except && f.button !== null && (!f.auto || reach.has(l))) used.add(f.button);
+  }
+  let n = 1; while (used.has(n) && n < 127) n++;
+  return n;
 }
 
 /** A line nothing uses: not wired, no job, no output, and not a shift target of any button. Null if there is none. */
@@ -206,7 +291,6 @@ const parked = (block: Uint8Array, wired: (line: number) => boolean) =>
 export function miniStick(block: Uint8Array, click: number, wired: (line: number) => boolean): MiniStick | null {
   const at = physicalEntry(click - 1);
   if (block[at] === USTICK) return block[at + 1] & 0x80 ? 'toggle-hat' : 'toggle-axes';
-  if (!(block[at] & 0x80)) return null;
   for (let l = 1; l <= 128; l++) if (l !== click && wired(l) && block[physicalEntry(l - 1)] === USTICK) return null;
   const spare = parked(block, wired);
   return spare.length && block[physicalEntry(spare[0] - 1) + 1] & 0x80 ? 'hat' : 'axes';
@@ -218,22 +302,27 @@ export function setMiniStick(block: Uint8Array, original: Uint8Array, click: num
   const kept = [click, ...parked(block, wired)].map((l) => physicalEntry(l - 1)).find((o) => block[o] === USTICK);
   const record = (kept !== undefined ? block[kept + 1] : original[at] === USTICK ? original[at + 1] : 0xe4) & 0x7f;
   for (const l of parked(block, wired)) block.set([0xff, 0xff], physicalEntry(l - 1));
+  const switching = block[at] === USTICK;
   if (mode === 'toggle-hat' || mode === 'toggle-axes') {
-    // coming back from being a button: drop the button number it was given (a switching press sends nothing).
-    // Not "what it was before": after a write, before is the button.
-    if (block[at] & 0x80) block.set([0xff, 0xff], logicalEntry(click - 1));
+    // coming back from being a button (or a shift key): drop the output it was given, as a switching press sends
+    // nothing. Not "what it was before": after a write, before is the button.
+    if (!switching) block.set([0xff, 0xff], logicalEntry(click - 1));
     block.set([USTICK, record | (mode === 'toggle-hat' ? 0x80 : 0)], at);
     return;
   }
-  const wasButton = !!(block[at] & 0x80);
-  block.set(PLAIN, at);
-  if (mode === 'hat') { const spare = freeLine(block, wired); if (spare) block.set([USTICK, record | 0x80], physicalEntry(spare - 1)); }
-  if (!wasButton) {
-    // newly a button: left on "its own number" it would send button 13, which the factory layout already uses. Give it
-    // the lowest joystick button nothing else sends.
-    const used = new Set<number>();
-    for (let l = 1; l <= 128; l++) { const f = logicalFunction(block, l - 1); if (f.button !== null && l !== click && (!f.auto || wired(l))) used.add(f.button); }
-    let free = 1; while (used.has(free) && free < 127) free++;
-    setLogical(block, click - 1, 'button', free);
+  if (switching) {
+    // newly a button: left on "its own number" it would send button 13, which the factory layout already uses
+    block.set(PLAIN, at);
+    setLogical(block, click - 1, 'button', freeButton(block, click, wired));
   }
+  if (mode === 'hat') { const spare = freeLine(block, wired); if (spare) block.set([USTICK, record | 0x80], physicalEntry(spare - 1)); }
+}
+
+/**
+ * What one direction of the mini-stick gives, by mode. It closes no switch: the stick makes a hat direction, or an
+ * axis value, out of the mini-stick's position. `hat` is the hat direction the chart would otherwise show.
+ */
+export function miniStickWay(dir: string, mode: MiniStick | null, hat: string): string {
+  const axis = dir === 'up' || dir === 'down' ? 'Y axis' : 'X axis';
+  return mode === 'axes' ? axis : mode === 'hat' ? hat : `${hat}, or ${axis}`;
 }

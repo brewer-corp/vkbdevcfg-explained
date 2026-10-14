@@ -8,7 +8,6 @@ export function Buttons({ ed, live }: { ed: Editor; live: LiveState | null }) {
   const [all, setAll] = useState(false);
   // The entry encoding (line -> joystick button) was confirmed on hardware; which physical control
   // is wired to which line was not, so the live highlight is the way to find a line.
-  const locked = !ed.canEdit('verified');
   const rows = [];
   let skip: boolean = false;
   for (let line = 0; line < LINES; line++) {
@@ -30,13 +29,13 @@ export function Buttons({ ed, live }: { ed: Editor; live: LiveState | null }) {
         <td>
           {l.kind === 'Button' || l.kind === 'Auto' || l.kind === 'No function'
             ? <span className="sends">
-                <select disabled={locked} value={l.auto ? 'auto' : l.kind === 'Button' ? 'button' : 'none'}
+                <select value={l.auto ? 'auto' : l.kind === 'Button' ? 'button' : 'none'}
                   onChange={(e) => ed.edit((b) => setLogical(b, line, e.target.value as LogicalChoice, l.button ?? line + 1))}>
                   <option value="button">button</option>
                   <option value="auto">same as line</option>
                   <option value="none">nothing</option>
                 </select>
-                {l.kind !== 'No function' && <input type="number" min={1} max={127} disabled={locked || l.auto} value={l.button ?? ''}
+                {l.kind !== 'No function' && <input type="number" min={1} max={127} disabled={l.auto} value={l.button ?? ''}
                   onChange={(e) => e.target.value !== '' && ed.edit((b) => setLogical(b, line, 'button', Math.max(1, Math.min(127, +e.target.value))))} />}
                 {l.detail && <span className="dim"> {l.detail}</span>}
               </span>

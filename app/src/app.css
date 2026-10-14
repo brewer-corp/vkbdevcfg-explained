@@ -23,11 +23,23 @@ code { background: var(--bg-3); border: 1px solid var(--line); padding: 0 4px; c
 .dim { color: var(--fg-faint); }
 b { color: #fff3e2; }
 
-.top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 16px; min-height: 52px; padding: 0 22px;
+/* the site's own top bar (site/styles.css), so the tool reads as one page of the site */
+.topbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 22px; min-height: 54px; padding: 0 22px; flex-wrap: wrap;
   background: rgba(5,4,3,.94); border-bottom: 1px solid var(--line-2); box-shadow: 0 1px 0 rgba(255,113,0,.25); }
-.mark { font-family: var(--caps); font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); text-decoration: none; text-shadow: 0 0 12px rgba(255,113,0,.45); }
+.mark { font-family: var(--caps); font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); text-decoration: none; text-shadow: 0 0 12px rgba(255,113,0,.45); white-space: nowrap; }
 .mark b { color: var(--fg); font-weight: 400; }
-.topright { margin-left: auto; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.topbar nav { display: flex; gap: 2px; margin-left: auto; flex-wrap: wrap; }
+.topbar nav a { font-family: var(--caps); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; text-decoration: none;
+  color: var(--fg-dim); padding: 9px 13px; border-bottom: 2px solid transparent; }
+.topbar nav a:hover { background: var(--accent); color: #000; }
+.topbar nav a.here { color: var(--accent); border-bottom-color: var(--accent); }
+.topbar nav a.here:hover { color: #000; }
+.topbar nav a.tool { color: var(--accent); border: 1px solid var(--accent); margin-right: 8px; }
+.topbar nav a.tool.here { background: var(--accent); color: #000; }
+/* off-site links: an arrow out of a box, drawn rather than typed (arrow characters are missing from too many fonts) */
+.topbar nav a.ext::after { content: ""; display: inline-block; width: 9px; height: 9px; margin-left: 6px; vertical-align: -1px; background: currentColor;
+  -webkit-mask: var(--out) center / contain no-repeat; mask: var(--out) center / contain no-repeat; }
+:root { --out: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.6'%3E%3Cpath d='M5 1.5H1.5v9h9V7M7 1h4v4M11 1 5.5 6.5'/%3E%3C/svg%3E"); }
 .devname { color: var(--fg-dim); font-size: 13px; }
 .src { font-family: var(--caps); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; padding: 3px 8px; color: #000; background: var(--ok); }
 .src-demo { background: var(--accent-2); } .src-file { background: var(--warn); }
@@ -101,7 +113,6 @@ b { color: #fff3e2; }
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
 @media (max-width: 620px) { .cols, .cards { grid-template-columns: 1fr; } }
 .field { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 6px; margin: 0 -6px; font-size: 13.5px; border-left: 2px solid transparent; }
-.field.locked { color: var(--fg-faint); }
 .field.changed { border-left-color: var(--accent); background: rgba(255,113,0,.10); }
 input[type=number], select { background: #000; color: var(--accent-hot); border: 1px solid var(--line-2); font: 13px var(--mono); padding: 4px 6px; width: 96px; }
 input[type=number]:disabled, select:disabled { color: var(--fg-faint); border-color: var(--line); }
@@ -172,6 +183,7 @@ table.lines { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-
 
 /* ------------------------------------------------------------ the chart --- */
 .page.wide { max-width: 1560px; padding: 12px 22px 0; }
+.page.wide .about { max-width: 1196px; margin: 34px auto 24px; }
 .shell { padding-bottom: 64px; }
 .chartwrap { min-width: 980px; }
 .charttools { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 0 0 8px; font-size: 13px; }
@@ -193,6 +205,13 @@ table.lines { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-
 .chart .spot.live { fill: var(--accent); stroke: var(--accent-hot); filter: drop-shadow(0 0 6px rgba(255,113,0,.9)); }
 
 .chart rect.title { fill: var(--line); }
+/* a box lights with its circle: blue while selected or pointed at, orange while pressed */
+.chart .box .frame { fill: none; stroke: none; pointer-events: none; }
+.chart .box.on .frame { fill: rgba(47,180,255,.06); stroke: var(--accent-2); stroke-width: 1.2; }
+.chart .box.on rect.title { fill: rgba(47,180,255,.72); }
+.chart .box.live .frame { fill: rgba(255,113,0,.07); stroke: var(--accent); stroke-width: 1.2; }
+.chart .box.live rect.title { fill: var(--accent); }
+.chart .box.on text.title, .chart .box.live text.title { fill: #000; }
 .chart text.title { fill: var(--accent); font-family: var(--caps); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; }
 .chart .row { cursor: pointer; }
 .chart .row rect { fill: var(--bg-2); stroke: var(--line); stroke-width: 1; }
@@ -230,18 +249,28 @@ table.lines { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-
 .inspector h3 span { color: var(--fg); margin-left: 8px; }
 .inspector p { margin: 0 0 10px; }
 .inspector .btn { margin: 4px 8px 4px 0; }
-.ifield { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 9px; }
-.ifield > span:first-child { color: var(--fg-dim); }
+.ifield { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; margin: 0 0 9px; flex-wrap: wrap; }
+.ifield > span:first-child { color: var(--fg-dim); white-space: nowrap; }
 .ifield select, .ifield input[type=number] { background: #000; color: var(--fg); border: 1px solid var(--line-2); font: 13px var(--mono); padding: 4px 6px; }
 .ifield select { width: auto; min-width: 96px; max-width: 100%; }
 .ifield input[type=number] { width: 74px; }
 .icols { display: grid; grid-template-columns: 1fr 230px; gap: 18px; align-items: start; }
 
+/* ------------------------------------------- the question before an unverified change --- */
+.scrim { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.72); }
+.danger { width: min(640px, 100%); background: #1a0503; border: 2px solid var(--bad); box-shadow: 0 0 0 1px #000, 0 0 60px rgba(255,59,48,.35);
+  padding: 22px 26px 18px; font-size: 15px; }
+.danger h2 { margin: 0 0 14px; font-family: var(--caps); font-weight: 400; font-size: 22px; letter-spacing: .1em; text-transform: uppercase; color: var(--bad); }
+.danger p { margin: 0 0 12px; }
+.danger .row { margin: 18px 0 12px; }
+.btn.risky { border-color: var(--bad); color: #fff; background: var(--bad); }
+.btn.risky:hover:not(:disabled) { background: #ff6a5f; color: #000; }
+
 /* ---------------------------------------------- applying: a bar and a drawer --- */
 .applybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; justify-content: space-between; align-items: center; gap: 16px;
   padding: 9px 22px; background: var(--bg-2); border-top: 1px solid var(--line-2); font-size: 13.5px; color: var(--fg-dim); }
 .applybar.dirty { border-top-color: var(--accent); color: var(--fg); }
-.applybar .row { margin: 0; }
+.applybar .row { margin: 0; gap: 12px; }
 .pill.warn { background: var(--bad); border-color: var(--bad); color: #000; }
 .drawer { position: fixed; top: 0; right: 0; bottom: 49px; z-index: 7; width: min(860px, 100%); overflow: auto; padding: 0 18px 24px;
   background: var(--bg); border-left: 1px solid var(--accent); box-shadow: -18px 0 40px rgba(0,0,0,.7); display: none; }

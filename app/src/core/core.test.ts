@@ -11,7 +11,8 @@ import { extRegisters, wiring } from './wiring';
 import { Session, applyToStick, backupName, checkStick, noteUnchecked, settleUnchecked } from '../session';
 import { foreignSigns, stickModel } from './identity';
 import { curveOutput, curvePoints, curveState, setCurvePoint, setCurveShape } from './curve';
-import { SCG_CHART, chartFits, freeLine, hatIncludes, lineOf, miniStick, roleOf, rowSends, setLayered, setMiniStick, setRole, shiftsInUse } from './chart';
+import { SCG_CHART, chartFits, choiceOf, freeButton, freeLine, hatIncludes, lineOf, miniStick, miniStickWay, roleOf, rowSends, setButton, setChoice, setLayered, setMiniStick,
+  setRole, shiftsInUse } from './chart';
 import { artSize, spot } from '../ui/StickArt';
 
 const text = (s: string) => new TextEncoder().encode(s);
@@ -390,14 +391,15 @@ describe('the chart', () => {
     const lines = rows.map((r) => lineOf(w, r.key));
     expect(lines.every((l) => l !== null)).toBe(true);
     expect(new Set(lines).size).toBe(rows.length);
-    expect(rows.length).toBe(35);                       // seven on the base, twenty-eight on the grip
+    expect(rows.length).toBe(34);                       // seven on the base, twenty-seven on the grip
+    expect(rows.some((r) => r.key === 'a1.push')).toBe(false);   // line 34: a plain hat's push, which a mini-stick grip lacks
     const bare = new Uint8Array(b); bare.fill(0, 0x330, 0x340);
     expect(chartFits(wiring(bare))).toBe(false);
   });
   it('says what each kind of control sends', () => {
     expect(rowSends(b, at('trigger.1'))).toMatchObject({ text: 'Button 1', simple: true, via: 10 });
     expect(rowSends(b, at('a1.up'))).toMatchObject({ text: 'Hat 1 up', simple: false });
-    expect(rowSends(b, at('mini-stick.push')).text).toBe('Switches it: hat or axes');
+    expect(rowSends(b, at('mini-stick.push')).text).toBe('Switches hat / axes');
     expect(rowSends(b, at('en.a'))).toMatchObject({ text: 'Button 23', via: 1 });      // the dial's two directions
     expect(rowSends(b, at('en.b'))).toMatchObject({ text: 'Button 24', via: 2 });
     expect(rowSends(b, at('f1')).text).toBe('Button 27');
@@ -443,6 +445,46 @@ describe('the chart', () => {
     expect(rowSends(c, l, 1).via).toBe(l);
     expect(logicalFunction(c, spare - 1).auto).toBe(true);                              // the spare line was handed back
     expect(physicalFunction(c, l - 1)).toMatchObject({ kind: 'Button', detail: '' });
+  });
+  it('offers one choice per control: a button, a shift key or nothing', () => {
+    const wired = (n: number) => w.has(n), l = at('a2');
+    expect(choiceOf(b, l, 0)).toBe('button');
+    expect(choiceOf(b, at('a1.up'), 0)).toBeNull();                                  // a hat direction
+    expect(choiceOf(b, at('en.a'), 0)).toBeNull();                                   // the dial
+    const c = new Uint8Array(b);
+    setChoice(c, b, l, 0, 'shift2', wired); expect(choiceOf(c, l, 0)).toBe('shift2');
+    setChoice(c, b, l, 0, 'none', wired);
+    expect(choiceOf(c, l, 0)).toBe('none'); expect(roleOf(c, l)).toBe('button');
+    setChoice(c, b, l, 0, 'button', wired);
+    expect(c).toEqual(b);                                                             // back to the number it had
+  });
+  it('gives a control that never sent a button the lowest free number', () => {
+    const wired = (n: number) => w.has(n), l = at('a2'), c = new Uint8Array(b);
+    setLogical(c, l - 1, 'none');
+    const fresh = new Uint8Array(c); setChoice(fresh, c, l, 0, 'button', wired);
+    expect(rowSends(fresh, l).text).toBe(`Button ${freeButton(c, l, wired)}`);
+    expect(freeButton(b, 0, wired)).toBe(31);                                         // the factory layout uses 1 to 30
+  });
+  it('types a button number, and typing the line number back restores "its own number"', () => {
+    const l = at('f1'), auto = new Uint8Array(b); setLogical(auto, l - 1, 'auto');
+    const c = new Uint8Array(auto);
+    setButton(c, auto, l, 0, 50); expect(rowSends(c, l).text).toBe('Button 50');
+    setButton(c, auto, l, 0, l); expect(c).toEqual(auto);
+  });
+  it('on a shift layer: the same as normal, its own button, or nothing', () => {
+    const wired = (n: number) => w.has(n), l = at('a2'), c = new Uint8Array(b);
+    expect(choiceOf(c, l, 1)).toBe('same');
+    setChoice(c, b, l, 1, 'button', wired);
+    const via = rowSends(c, l, 1).via;
+    expect(via).not.toBe(l); expect(w.has(via)).toBe(false);
+    expect(choiceOf(c, l, 1)).toBe('button');
+    expect(rowSends(c, l, 1).text).toBe('Button 31');                                 // not the spare line's own number
+    setButton(c, b, l, 1, 60); expect(rowSends(c, l, 1).text).toBe('Button 60');
+    setChoice(c, b, l, 1, 'none', wired); expect(rowSends(c, l, 1)).toMatchObject({ text: 'nothing', via });
+    setChoice(c, b, l, 1, 'same', wired);
+    expect(c).toEqual(b);
+    const shifted = new Uint8Array(b); setRole(shifted, b, l, 'shift1');
+    expect(choiceOf(shifted, l, 1)).toBeNull();                                       // a shift key has no layers of its own
   });
   it('places every control inside its drawing, for all four sticks', () => {
     for (const g of [...SCG_CHART.inner, ...SCG_CHART.outer])
@@ -527,6 +569,21 @@ describe('the mini-stick and its click', () => {
     const written = new Uint8Array(b); setMiniStick(written, b, click, 'hat', wired);
     const c = new Uint8Array(written); setMiniStick(c, written, click, 'toggle-hat', wired);     // found on a real stick
     expect(c).toEqual(b);
+  });
+  it('lets the freed click be a shift key, and keeps the mode while it is one', () => {
+    const c = new Uint8Array(b); setMiniStick(c, b, click, 'hat', wired);
+    setChoice(c, b, click, 0, 'shift1', wired);
+    expect(miniStick(c, click, wired)).toBe('hat');
+    setMiniStick(c, b, click, 'axes', wired);
+    expect(roleOf(c, click)).toBe('shift1');
+    expect(miniStick(c, click, wired)).toBe('axes');
+    setMiniStick(c, b, click, 'toggle-hat', wired);
+    expect(c).toEqual(b);
+  });
+  it('says what each direction gives in each mode', () => {
+    expect(miniStickWay('up', 'hat', 'Hat 1 up')).toBe('Hat 1 up');
+    expect(miniStickWay('left', 'axes', 'Hat 1 left')).toBe('X axis');
+    expect(miniStickWay('down', 'toggle-hat', 'Hat 1 down')).toBe('Hat 1 down, or Y axis');
   });
   it('keeps a button number the user chose for the click when switching between the two "always" choices', () => {
     const c = new Uint8Array(b); setMiniStick(c, b, click, 'axes', wired); setLogical(c, click - 1, 'button', 77);
