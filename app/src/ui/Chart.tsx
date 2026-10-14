@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '../App';
-import { GroupDef, Layer, RowDef, SCG_AXES, SCG_CHART, freeLine, lineOf, roleOf, rowSends, setLayered, setRole, shiftsInUse } from '../core/chart';
+import { GroupDef, Layer, RowDef, SCG_AXES, SCG_CHART, freeLine, hatIncludes, lineOf, roleOf, rowSends, setLayered, setRole, shiftsInUse } from '../core/chart';
 import { stickModel } from '../core/identity';
 import { HID_USAGES, LOGICAL_AXIS, LogicalChoice, logicalAxisBase, logicalEntry, logicalFunction, physicalEntry, physicalFunction, readField, setLogical } from '../core/schema';
 import type { Session } from '../session';
@@ -58,6 +58,15 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
   }, [hand, mount]);
 
   const line = (key: string) => lineOf(ed.controls, key);
+  // A row is lit while its switch is closed, or, for a hat direction, while the stick reports that hat pointing that
+  // way. The second matters for an analogue mini-stick acting as a hat: it closes no switch at all.
+  const lit = (key: string) => {
+    const l = line(key);
+    if (l === null || !live) return false;
+    if (live.lines.has(l)) return true;
+    const hat = rowSends(ed.original, l, 0).hat;
+    return !!hat && hatIncludes(live.hats[hat.n - 1] ?? 8, hat.dir);
+  };
   const shifts = shiftsInUse(ed.block);
   useEffect(() => { if ((layer === 1 && !shifts.shift1) || (layer === 2 && !shifts.shift2)) setLayer(0); }, [layer, shifts.shift1, shifts.shift2]);
 
@@ -103,13 +112,13 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
           </g>
           {/* leader lines run over the drawing, as on a paper chart */}
           {placed.groups.map(({ group, side, y, hot }) => {
-            const lit = group.rows.some((r) => live?.lines.has(line(r.key) ?? -1));
-            return <path key={group.id} className={`leader ${hover === group.id || picked?.group.id === group.id ? 'on' : ''} ${lit ? 'live' : ''}`}
+            const on = group.rows.some((r) => lit(r.key));
+            return <path key={group.id} className={`leader ${hover === group.id || picked?.group.id === group.id ? 'on' : ''} ${on ? 'live' : ''}`}
               d={`M${edge(side)},${y + COL.title / 2} L${hot[0]},${hot[1]}`} />;
           })}
           {placed.groups.map(({ group, hot }) => {
-            const lit = group.rows.some((r) => live?.lines.has(line(r.key) ?? -1));
-            return <circle key={group.id} className={`spot ${lit ? 'live' : ''} ${hover === group.id || picked?.group.id === group.id ? 'on' : ''}`} cx={hot[0]} cy={hot[1]} r={6}
+            const on = group.rows.some((r) => lit(r.key));
+            return <circle key={group.id} className={`spot ${on ? 'live' : ''} ${hover === group.id || picked?.group.id === group.id ? 'on' : ''}`} cx={hot[0]} cy={hot[1]} r={6}
               onMouseEnter={() => setHover(group.id)} onMouseLeave={() => setHover(null)} onClick={() => setSel({ kind: 'row', key: group.rows[0].key })} />;
           })}
           {placed.groups.map(({ group, side, y }) => (
@@ -159,7 +168,7 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
     if (l === null) return null;
     const sends = rowSends(ed.block, l, layer);
     const same = layer !== 0 && sends.via === l && roleOf(ed.block, l) === 'button';
-    const cls = `row ${live?.lines.has(l) ? 'live' : ''} ${sel?.kind === 'row' && sel.key === row.key ? 'sel' : ''} ${same ? 'same' : ''}`;
+    const cls = `row ${lit(row.key) ? 'live' : ''} ${sel?.kind === 'row' && sel.key === row.key ? 'sel' : ''} ${same ? 'same' : ''}`;
     return (
       <g key={row.key} className={cls} onClick={() => setSel({ kind: 'row', key: row.key })}>
         <rect x={x} y={y} width={COL.w} height={COL.row - 2} />

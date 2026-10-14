@@ -69,15 +69,26 @@ export interface Sends {
   via: number;
   /** A plain button, auto-numbered button or nothing: what the chart can edit directly. */
   simple: boolean;
+  /** Set when what is sent is a direction of a hat (1-based hat number). */
+  hat?: { n: number; dir: string };
+}
+
+/**
+ * Whether a hat's reported value (0 = up, clockwise in eighths, 8 = centred) includes a direction. A diagonal counts
+ * for both of its neighbours.
+ */
+export function hatIncludes(value: number, dir: string): boolean {
+  const at = ['up', 'right', 'down', 'left'].indexOf(dir) * 2;
+  return value < 8 && at >= 0 && [(at + 7) % 8, at, (at + 1) % 8].includes(value);
 }
 
 const title = (s: string) => s[0].toUpperCase() + s.slice(1);
 
-function output(block: Uint8Array, line: number): { text: string; simple: boolean } {
+function output(block: Uint8Array, line: number): { text: string; simple: boolean; hat?: Sends['hat'] } {
   const l = logicalFunction(block, line - 1);
   if (l.kind === 'Button' || l.kind === 'Auto') return { text: `Button ${l.button}${l.detail ? ' ' + l.detail : ''}`, simple: true };
   if (l.kind === 'No function') return { text: 'nothing', simple: true };
-  if (l.kind === 'Hat') { const [hat, dir] = l.detail.split(', '); return { text: `${title(hat)} ${dir}`, simple: false }; }
+  if (l.kind === 'Hat') { const [hat, dir] = l.detail.split(', '); return { text: `${title(hat)} ${dir}`, simple: false, hat: { n: +hat.slice(4), dir } }; }
   return { text: `${l.kind}${l.detail ? ' ' + l.detail : ''}`, simple: false };
 }
 
@@ -97,7 +108,7 @@ export function rowSends(block: Uint8Array, line: number, layer: Layer = 0): Sen
     return { ...output(block, via), via };
   }
   if (p.kind === 'Encoder') { const via = ((b1 + 1) & 0x7f) || line; return { ...output(block, via), via, simple: false }; }
-  if (p.kind === 'POV switch') { const [hat, dir] = p.detail.split(', '); return { text: `${title(hat)} ${dir}`, via: line, simple: false }; }
+  if (p.kind === 'POV switch') { const [hat, dir] = p.detail.split(', '); return { text: `${title(hat)} ${dir}`, via: line, simple: false, hat: { n: +hat.slice(4), dir } }; }
   if (p.kind === 'uStick switch') return { text: 'Switches mini-stick: hat or axes', via: line, simple: false };
   if (p.kind === 'No function') return { text: 'nothing', via: line, simple: false };
   if (p.kind === 'SHIFT') { const [which, ...how] = p.detail.split(' + '); return { text: `${which} key${how.length ? ` (${how.join(', ')})` : ''}`, via: line, simple: false }; }

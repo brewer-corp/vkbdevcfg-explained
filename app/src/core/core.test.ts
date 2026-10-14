@@ -11,7 +11,7 @@ import { extRegisters, wiring } from './wiring';
 import { Session, applyToStick, backupName, checkStick, noteUnchecked, settleUnchecked } from '../session';
 import { foreignSigns, stickModel } from './identity';
 import { curveOutput, curvePoints, curveState, setCurvePoint, setCurveShape } from './curve';
-import { SCG_CHART, chartFits, freeLine, lineOf, roleOf, rowSends, setLayered, setRole, shiftsInUse } from './chart';
+import { SCG_CHART, chartFits, freeLine, hatIncludes, lineOf, roleOf, rowSends, setLayered, setRole, shiftsInUse } from './chart';
 import { artSize, spot } from '../ui/StickArt';
 
 const text = (s: string) => new TextEncoder().encode(s);
@@ -405,6 +405,16 @@ describe('the chart', () => {
     expect(rowSends(auto, at('f1')).text).toBe('Button 6');                             // left on auto: its own line number
     const shifted = new Uint8Array(b); setRole(shifted, b, at('d1'), 'shift1');
     expect(rowSends(shifted, at('d1')).text).toBe('SHIFT1 key');
+  });
+  it('knows which rows are hat directions, and when the hat points their way', () => {
+    expect(rowSends(b, at('a1.up')).hat).toEqual({ n: 1, dir: 'up' });
+    expect(rowSends(b, at('a1.left')).hat).toEqual({ n: 1, dir: 'left' });
+    expect(rowSends(b, at('trigger.1')).hat).toBeUndefined();
+    expect(hatIncludes(0, 'up')).toBe(true);
+    expect(hatIncludes(1, 'up') && hatIncludes(1, 'right')).toBe(true);      // up-right lights both
+    expect(hatIncludes(2, 'up')).toBe(false);
+    expect(hatIncludes(7, 'up') && hatIncludes(7, 'left')).toBe(true);
+    expect(['up', 'right', 'down', 'left'].some((d) => hatIncludes(8, d))).toBe(false);   // centred
   });
   it('makes a control a shift key and back', () => {
     const c = new Uint8Array(b), l = at('d1');
