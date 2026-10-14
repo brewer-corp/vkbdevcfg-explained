@@ -41,10 +41,13 @@ change it. There is a row for each axis too, with its live value, deadzones and 
 
 The chart exists for a Gladiator EVO with an SCG grip. Other hardware gets the tables.
 
-The drawings (`src/ui/StickArt.tsx`) are outlines traced by program from two product photographs,
-an upright right-hand stick and a left-hand one on an Omni adapter, with the controls and a few
-edges added at positions measured on the same photographs. The photographs are not in the
-repository; the outlines are in `stickart.paths.ts`. The other two sticks are mirror images.
+The drawings are made by program from photographs: `dev/photo-to-lines.mjs` finds the stick's
+silhouette, runs edge detection inside it and follows the edges into vector paths
+(`src/ui/stickart.paths.ts`). The two in the app come from product photographs, an upright
+right-hand stick and a left-hand one on an Omni adapter; the photographs themselves are not in
+the repository, and the other two sticks are mirror images. Where each control sits on a drawing
+was measured on the same photograph (`src/ui/StickArt.tsx`). A photo of your own stick against a
+plain background goes through the same script.
 
 **After a write the browser asks for the stick again.** A write restarts the stick, which to the
 browser is an unplug. Chrome keeps a site's permission across an unplug only for devices that
