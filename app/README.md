@@ -13,8 +13,9 @@ npm test
 npm run build
 ```
 
-Needs Chrome or Edge (WebHID). On Linux the browser also needs access to the
-device node:
+Needs Chrome or a browser built on it: Edge, Opera, Vivaldi, Brave (WebHID; not on Android or iOS).
+The first screen says so when it can tell the browser is something else. On Linux the browser also
+needs access to the device node:
 
 ```
 # /etc/udev/rules.d/70-vkb.rules

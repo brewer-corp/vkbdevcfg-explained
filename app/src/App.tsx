@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { diffBlocks } from './core/block';
-import { webHidAvailable } from './core/webhid';
+import { browserFit, webHidAvailable } from './core/webhid';
 import { Control, wiring } from './core/wiring';
 import { Session, connectDemo, connectDevice, grantedSticks, openFile } from './session';
 import { LateWrite, Overview } from './ui/Overview';
@@ -73,6 +73,7 @@ export function App() {
   const changedBytes = changes.reduce((n, r) => n + r.end - r.start + 1, 0);
 
   if (!session || !block) {
+    const fit = browserFit();
     return (
       <div className="shell">
         <Top />
@@ -83,12 +84,22 @@ export function App() {
             Reads the whole configuration straight from the stick, lets you change it, and writes it back.
             Nothing to install, and no vendor software involved. Reading never changes anything.
           </p>
+          {fit === 'not-chromium' && (
+            <div className="note warn"><b>Use Chrome, or a browser built on it: Edge, Opera, Vivaldi or Brave.</b> This one does not
+              look like any of them. The tool talks to the stick through WebHID, which Firefox and Safari do not have, and neither
+              does any browser on an iPhone or iPad. Opening a profile and the demo still work here.</div>
+          )}
+          {fit === 'no-webhid' && (
+            <div className="note warn"><b>This browser is built on Chrome, but WebHID is missing or switched off.</b> Chrome on
+              Android has none, and some browsers turn it off. Use Chrome or Edge on a computer to connect a stick. Opening a
+              profile and the demo still work here.</div>
+          )}
           {error && <div className="note warn"><b>That did not work.</b> {error}</div>}
           <div className="choices">
             <button className="choice primary" disabled={!webHidAvailable() || !!busy}
               onClick={() => start(() => connectDevice(), 'Reading the stick…')}>
               <b>Connect over USB</b>
-              <span>{webHidAvailable() ? 'Pick your stick from the browser’s list.' : 'Needs Chrome or Edge: this browser has no WebHID.'}</span>
+              <span>{fit === 'ok' ? 'Pick your stick from the browser’s list.' : webHidAvailable() ? 'Untried in this browser: see above.' : 'Not in this browser: see above.'}</span>
             </button>
             {known.map((d) => (
               <button key={d.productId} className="choice" disabled={!!busy}

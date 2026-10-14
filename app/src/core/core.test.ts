@@ -14,6 +14,7 @@ import { curveOutput, curvePoints, curveState, setCurvePoint, setCurveShape } fr
 import { SCG_CHART, chartFits, choiceOf, freeButton, freeLine, hatIncludes, lineOf, miniStick, miniStickWay, roleOf, rowSends, setButton, setChoice, setLayered, setMiniStick,
   setRole, shiftsInUse } from './chart';
 import { artSize, spot } from '../ui/StickArt';
+import { browserFit } from './webhid';
 
 const text = (s: string) => new TextEncoder().encode(s);
 
@@ -589,5 +590,32 @@ describe('the mini-stick and its click', () => {
     const c = new Uint8Array(b); setMiniStick(c, b, click, 'axes', wired); setLogical(c, click - 1, 'button', 77);
     setMiniStick(c, b, click, 'hat', wired);
     expect(rowSends(c, click).text).toBe('Button 77');
+  });
+});
+
+describe('which browsers can reach a stick', () => {
+  const ua = {
+    chrome: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+    edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0',
+    firefox: 'Mozilla/5.0 (X11; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+    safari: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15',
+    chromeIos: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.0.0 Mobile/15E148 Safari/604.1',
+    chromeAndroid: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36',
+  };
+  const brands = (...names: string[]) => ({ brands: names.map((brand) => ({ brand })) });
+  it('takes Chromium at its word when it names itself', () => {
+    expect(browserFit({ userAgent: ua.chrome, userAgentData: brands('Google Chrome', 'Chromium', 'Not=A?Brand') }, true)).toBe('ok');
+    expect(browserFit({ userAgent: ua.edge, userAgentData: brands('Microsoft Edge', 'Chromium') }, true)).toBe('ok');
+    expect(browserFit({ userAgent: ua.chrome, userAgentData: brands('Chromium', 'Vivaldi') }, true)).toBe('ok');
+  });
+  it('falls back on the user-agent string', () => {
+    expect(browserFit({ userAgent: ua.chrome }, true)).toBe('ok');
+    expect(browserFit({ userAgent: ua.chrome, userAgentData: { brands: [] } }, true)).toBe('ok');   // overridden user agent
+    expect(browserFit({ userAgent: ua.firefox }, false)).toBe('not-chromium');
+    expect(browserFit({ userAgent: ua.safari }, false)).toBe('not-chromium');
+    expect(browserFit({ userAgent: ua.chromeIos }, false)).toBe('not-chromium');                     // Safari underneath
+  });
+  it('tells Chromium without WebHID apart', () => {
+    expect(browserFit({ userAgent: ua.chromeAndroid, userAgentData: brands('Google Chrome', 'Chromium') }, false)).toBe('no-webhid');
   });
 });

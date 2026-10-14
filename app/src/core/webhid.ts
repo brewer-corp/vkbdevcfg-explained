@@ -4,6 +4,22 @@ import { FRAME, REPORT_ID, Transport } from './protocol';
 export const VKB_VENDOR_ID = 0x231d;
 export const webHidAvailable = () => typeof navigator !== 'undefined' && 'hid' in navigator;
 
+/** Whether this browser can reach a stick: `not-chromium` (Firefox, Safari, anything on an iPhone), or Chromium without WebHID. */
+export type BrowserFit = 'ok' | 'not-chromium' | 'no-webhid';
+
+interface Nav { userAgent: string; userAgentData?: { brands?: { brand: string }[] } }
+
+/**
+ * Only browsers built on Chromium (Chrome, Edge, Opera, Vivaldi, Brave) have WebHID. Chromium names itself in
+ * `navigator.userAgentData`, which no other engine has; failing that, the user-agent string, where Firefox and Safari
+ * never write "Chrome/" (nor does Chrome on iOS, which is Safari underneath).
+ */
+export function browserFit(nav: Nav = navigator as Nav, hid = webHidAvailable()): BrowserFit {
+  const brands = nav.userAgentData?.brands;
+  const chromium = brands?.length ? brands.some((b) => b.brand === 'Chromium') : /\b(Chrome|Chromium)\/\d/.test(nav.userAgent);
+  return !chromium ? 'not-chromium' : hid ? 'ok' : 'no-webhid';
+}
+
 const ANSWER_MS = 1500;
 
 /**
