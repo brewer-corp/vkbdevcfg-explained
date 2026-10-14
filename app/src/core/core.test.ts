@@ -11,7 +11,7 @@ import { extRegisters, wiring } from './wiring';
 import { Session, applyToStick, backupName, checkStick, noteUnchecked, settleUnchecked } from '../session';
 import { foreignSigns, stickModel } from './identity';
 import { curveOutput, curvePoints, curveState, setCurvePoint, setCurveShape } from './curve';
-import { SCG_CHART, chartFits, freeLine, hatIncludes, lineOf, roleOf, rowSends, setLayered, setRole, shiftsInUse } from './chart';
+import { SCG_CHART, chartFits, freeLine, hatIncludes, lineOf, miniStick, roleOf, rowSends, setLayered, setMiniStick, setRole, shiftsInUse } from './chart';
 import { artSize, spot } from '../ui/StickArt';
 
 const text = (s: string) => new TextEncoder().encode(s);
@@ -397,7 +397,7 @@ describe('the chart', () => {
   it('says what each kind of control sends', () => {
     expect(rowSends(b, at('trigger.1'))).toMatchObject({ text: 'Button 1', simple: true, via: 10 });
     expect(rowSends(b, at('a1.up'))).toMatchObject({ text: 'Hat 1 up', simple: false });
-    expect(rowSends(b, at('mini-stick.push')).text).toBe('Switches mini-stick: hat or axes');
+    expect(rowSends(b, at('mini-stick.push')).text).toBe('Switches it: hat or axes');
     expect(rowSends(b, at('en.a'))).toMatchObject({ text: 'Button 23', via: 1 });      // the dial's two directions
     expect(rowSends(b, at('en.b'))).toMatchObject({ text: 'Button 24', via: 2 });
     expect(rowSends(b, at('f1')).text).toBe('Button 27');
@@ -488,5 +488,49 @@ describe('response curves', () => {
   it('recognises a curve it did not make as custom', () => {
     const c = new Uint8Array(b); c.set(fromHex('3a424a515961697078 80'), 0xbc + 40); c[0x7c + 8 * 4 + 3] |= 0x10;
     expect(curveState(c, 4)).toMatchObject({ on: true, shape: null });
+  });
+});
+
+describe('the mini-stick and its click', () => {
+  // every byte pattern asserted here was tried on a stick: see docs/BLOCK-BUTTONS.md section 11a
+  const b = demoBlock(), w = wiring(b), wired = (n: number) => w.has(n), click = lineOf(w, 'mini-stick.push')!;
+  const at = (c: Uint8Array, line: number) => [...c.subarray(physicalEntry(line - 1), physicalEntry(line - 1) + 2)];
+  it('from the factory the click switches, starting as a hat', () => {
+    expect(click).toBe(13);
+    expect(miniStick(b, click, wired)).toBe('toggle-hat');
+  });
+  it('always a hat: the click becomes a button and the switching record is parked where nothing can press it', () => {
+    const c = new Uint8Array(b); setMiniStick(c, b, click, 'hat', wired);
+    expect(at(c, click)).toEqual([0xff, 0x7f]);
+    const spare = [...Array(128).keys()].map((i) => i + 1).filter((l) => l !== click && c[physicalEntry(l - 1)] === 0x2e);
+    expect(spare).toHaveLength(1);
+    expect(w.has(spare[0])).toBe(false);
+    expect(at(c, spare[0])).toEqual([0x2e, 0xe4]);
+    expect(miniStick(c, click, wired)).toBe('hat');
+    expect(rowSends(c, click)).toMatchObject({ text: 'Button 31', simple: true });   // the lowest number the factory layout leaves free
+    expect(freeLine(c, wired)).not.toBe(spare[0]);                                   // and that line is no longer handed out
+  });
+  it('always axes: the click is a button and no switching record is left', () => {
+    const c = new Uint8Array(b); setMiniStick(c, b, click, 'axes', wired);
+    expect(at(c, click)).toEqual([0xff, 0x7f]);
+    expect([...Array(128).keys()].some((i) => c[physicalEntry(i)] === 0x2e)).toBe(false);
+    expect(miniStick(c, click, wired)).toBe('axes');
+  });
+  it('moves between all four and comes back to the factory bytes', () => {
+    const c = new Uint8Array(b);
+    for (const m of ['hat', 'axes', 'hat', 'toggle-axes'] as const) { setMiniStick(c, b, click, m, wired); expect(miniStick(c, click, wired)).toBe(m); }
+    expect(at(c, click)).toEqual([0x2e, 0x64]);
+    setMiniStick(c, b, click, 'toggle-hat', wired);
+    expect(c).toEqual(b);
+  });
+  it('comes back to the factory bytes even after the change has been written (the stick, not the page, is then "before")', () => {
+    const written = new Uint8Array(b); setMiniStick(written, b, click, 'hat', wired);
+    const c = new Uint8Array(written); setMiniStick(c, written, click, 'toggle-hat', wired);     // found on a real stick
+    expect(c).toEqual(b);
+  });
+  it('keeps a button number the user chose for the click when switching between the two "always" choices', () => {
+    const c = new Uint8Array(b); setMiniStick(c, b, click, 'axes', wired); setLogical(c, click - 1, 'button', 77);
+    setMiniStick(c, b, click, 'hat', wired);
+    expect(rowSends(c, click).text).toBe('Button 77');
   });
 });

@@ -35,6 +35,8 @@ change it. There is a row for each axis too, with its live value, deadzones and 
 - **Layers.** Any button can be made the SHIFT1 or SHIFT2 key. The layer switch above the chart
   then shows what every other control sends while it is held, and a control can be given its own
   output there. The stick does that through a spare line; the chart picks one and never shows it.
+- **The mini-stick.** From the factory its click switches it between a hat and two axes. Its row
+  offers the other arrangements: always a hat, or always axes, with the click freed to be a button.
 - **What it does not edit yet:** hats, keys and the rarer functions (they are shown, and edited
   on the table tabs), LEDs, calibration.
 - **Applying** is a bar along the bottom and a drawer: the list of changed bytes, the write, the

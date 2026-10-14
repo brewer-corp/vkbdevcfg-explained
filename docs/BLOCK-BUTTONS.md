@@ -175,7 +175,7 @@ verified.
 | `0x29` | **RPB** (replica button) | b1 = source line − 1 | **verified**: the line is active for as long as its source is, and shows in the line map |
 | `0x2A`, `0x2B` | **Curves** (`2B` = alternate action) | axis mask, as Fix Axes | static |
 | `0x2C`, `0x2D` | **Rel Axes** | `2C` = reset, `2D` = set to the FA3 value: axis mask. `2D` with e1 bit 7 = "set value 2": b1 = (axis 1 − 1) OR (axis 2 << 4), e0 and e1 = the two percentages | static |
-| `0x2E` | **uStick Switch** | b1 bits 0–1 = hat − 1, bits 2–4 = kind (Button, Cyclic, Tempo, SHIFT, SubSHIFT, Tempo B), bits 5–6 = an operand that depends on the kind, bit 7 = start in hat mode. e0 bit 0 = no axes | static. The mini-stick's push on the real stick is `2E E4`: hat 1, Cyclic, start in hat mode |
+| `0x2E` | **uStick Switch** | b1 bits 0–1 = hat − 1, bits 2–4 = kind (Button, Cyclic, Tempo, SHIFT, SubSHIFT, Tempo B), bits 5–6 = an operand that depends on the kind, bit 7 = start in hat mode. e0 bit 0 = no axes | **verified** for what the factory record does (`2E E4`: hat 1, Cyclic, start as a hat): each press switches the mini-stick between hat and axes, and bit 7 chooses how it starts. The record need not be on the mini-stick's own line (§11a). Other kinds static |
 | `0x2F` | **Parametric** ("DZ switch") | axis mask | static |
 | `0x30`–`0x37` | **Trimmer** | sub: 0 reset, 1 trim +, 2 trim −, 3 auto +, 4 auto −, 5 set +, 6 set −, 7 return. e1 bit 7 turns sub 5 into "set 2" and sub 0 into "off", which is how the tool's ten kinds fit three bits. For sub 1–4, b1 = (axis − 1, 3 bits) OR (multiplier index << 3) OR ((axis > 8) << 7); for set ±, b1 = (value index << 3) OR (axis − 1), in steps of 5 % | static |
 | `0x38`–`0x3B` | **POV Switch** | sub = direction: 0 up, 1 right, 2 down, 3 left. b1 bits 0–1 = hat − 1, bits 2–3 = virtual controller − 1 | **verified**: direction, hat number, and that two held lines of one hat give the diagonal |
@@ -792,7 +792,28 @@ And tested with held lines alone, as before:
 | Boolean in from the SHIFT layer; from another record, with r3 = `FF` on the first | as predicted | layers 4 and 6 |
 | Boolean on a G8 line, inputs from the physical / virtual / logical layer | steady / pulsing / pulsing | "physical" is the raw line, "virtual" is after its function |
 
-About sixty configurations in all, each written, read back, observed for a
+### The mini-stick's mode, seen at rest
+
+An analogue mini-stick is either a hat or two axes, and nothing shows which
+while it sits at centre. Shifting its X axis off centre with the calibration
+bias (physical axis 5, bytes 6–7) makes the mode visible with nobody touching
+it: as a hat, hat 1 points right or left and both axes read centre; as axes,
+hat 1 is centred and the axis reads off centre. The click, line 13, was then
+"pressed" by the clock above.
+
+| Configuration | Seen | Reading |
+|---|---|---|
+| factory: line 13 = `2E E4` | hat | bit 7 of byte 1 = start as a hat |
+| line 13 = `2E 64` | axes | |
+| factory, line 13 pressed twice a second | hat, axes, hat, axes … | each press switches |
+| line 13 = plain Button, no `2E` record anywhere | axes, for good; presses send button 13 | without a switching record the mini-stick is two axes |
+| line 13 = plain Button, `2E E4` parked on line 100 | hat, for good; presses send button 13 | the record sets the starting mode from any line; on a line nothing is wired to, nothing can switch it |
+| line 13 = plain Button, `2E 64` parked on line 100 | axes | |
+
+So the mini-stick's click can be freed for another use, with the mini-stick
+fixed as either a hat or two axes.
+
+About seventy configurations in all, each written, read back, observed for a
 few seconds and replaced; the original went back at the end of each batch.
 
 Still not shown: which physical control is wired to which line (§9.1).

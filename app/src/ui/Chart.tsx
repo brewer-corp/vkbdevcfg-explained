@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '../App';
-import { GroupDef, Layer, RowDef, SCG_AXES, SCG_CHART, freeLine, hatIncludes, lineOf, roleOf, rowSends, setLayered, setRole, shiftsInUse } from '../core/chart';
+import { GroupDef, Layer, MINI_STICK, MiniStick, RowDef, SCG_AXES, SCG_CHART, freeLine, hatIncludes, lineOf, miniStick, roleOf, rowSends, setLayered, setMiniStick, setRole,
+  shiftsInUse } from '../core/chart';
 import { stickModel } from '../core/identity';
 import { HID_USAGES, LOGICAL_AXIS, LogicalChoice, logicalAxisBase, logicalEntry, logicalFunction, physicalEntry, physicalFunction, readField, setLogical } from '../core/schema';
 import type { Session } from '../session';
@@ -188,11 +189,19 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
     const moved = layer !== 0 && sends.via !== l;
     const canSet = sends.simple && (layer === 0 || moved);
     const wired = (n: number) => ed.controls.has(n);
+    // the mini-stick's click is special: from the factory it is what turns the mini-stick from a hat into two axes
+    const mini = row.key === 'mini-stick.push' ? miniStick(ed.block, l, wired) : null;
     return (
       <>
         <h3>{picked.group.title} <span>{row.label}</span>
           <em className={`pill ${live?.lines.has(l) ? 'ok' : ''}`}>{live?.lines.has(l) ? 'pressed' : `line ${l}`}</em></h3>
-        {layer === 0 && role !== 'other' && (
+        {mini && layer === 0 && (
+          <label className="ifield"><span>The mini-stick is</span>
+            <select value={mini} onChange={(e) => ed.edit((b) => setMiniStick(b, ed.original, l, e.target.value as MiniStick, wired))}>
+              {(Object.keys(MINI_STICK) as MiniStick[]).map((m) => <option key={m} value={m}>{MINI_STICK[m]}</option>)}
+            </select></label>
+        )}
+        {layer === 0 && role !== 'other' && !mini && (
           <label className="ifield"><span>This control is</span>
             <select value={role} onChange={(e) => ed.edit((b) => setRole(b, ed.original, l, e.target.value as 'button' | 'shift1' | 'shift2'))}>
               <option value="button">a button</option>
@@ -200,7 +209,8 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
               <option value="shift2">the SHIFT2 key</option>
             </select></label>
         )}
-        {role === 'other' && <p className="dim">{p.kind}{p.detail ? `: ${p.detail}` : ''}. This kind of control is edited under the hood for now.</p>}
+        {role === 'other' && !mini && <p className="dim">{p.kind}{p.detail ? `: ${p.detail}` : ''}. This kind of control is edited under the hood for now.</p>}
+        {mini?.startsWith('toggle') && <p className="dim">Pressing the mini-stick in switches it between the two. To use the press for something else, pick one of the “always” choices.</p>}
         {role !== 'button' && role !== 'other' && (
           <p className="dim">While it is held, every button can send something else: switch to the “{LAYERS[role === 'shift1' ? 1 : 2]}” layer above to set that up. It sends nothing itself.</p>
         )}
@@ -228,7 +238,7 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
         )}
         {role === 'button' && !sends.simple && <p className="dim">Sends <b>{sends.text}</b>. Outputs other than joystick buttons are edited under the hood for now.</p>}
         {moved && <button className="btn ghost" onClick={() => ed.edit((b) => setLayered(b, l, layer as 1 | 2, null))}>Same as normal again</button>}
-        {changed(l) && layer === 0 && (
+        {changed(l) && layer === 0 && !mini && (
           <button className="btn ghost" onClick={() => ed.edit((b) => { for (const o of [physicalEntry(l - 1), logicalEntry(l - 1)]) b.set(ed.original.subarray(o, o + 2), o); })}>Undo changes to this control</button>
         )}
       </>

@@ -1,6 +1,6 @@
 // The stick as a chart: which controls it has, how they group, and what each one sends.
 // This is the model behind the picture; nothing here draws anything.
-import { logicalFunction, physicalEntry, physicalFunction } from './schema';
+import { logicalEntry, logicalFunction, physicalEntry, physicalFunction, setLogical } from './schema';
 import type { Control } from './wiring';
 
 /** `glyph` is one of the drawn marks (up, down, left, right, push, click, dot) or a short text such as "F1". */
@@ -109,7 +109,7 @@ export function rowSends(block: Uint8Array, line: number, layer: Layer = 0): Sen
   }
   if (p.kind === 'Encoder') { const via = ((b1 + 1) & 0x7f) || line; return { ...output(block, via), via, simple: false }; }
   if (p.kind === 'POV switch') { const [hat, dir] = p.detail.split(', '); return { text: `${title(hat)} ${dir}`, via: line, simple: false, hat: { n: +hat.slice(4), dir } }; }
-  if (p.kind === 'uStick switch') return { text: 'Switches mini-stick: hat or axes', via: line, simple: false };
+  if (p.kind === 'uStick switch') return { text: 'Switches it: hat or axes', via: line, simple: false };
   if (p.kind === 'No function') return { text: 'nothing', via: line, simple: false };
   if (p.kind === 'SHIFT') { const [which, ...how] = p.detail.split(' + '); return { text: `${which} key${how.length ? ` (${how.join(', ')})` : ''}`, via: line, simple: false }; }
   return { text: p.detail ? `${p.kind}: ${p.detail}` : p.kind, via: line, simple: false };
@@ -176,5 +176,64 @@ export function setLayered(block: Uint8Array, line: number, layer: 1 | 2, spare:
     if (layer === 1) block[at] |= 0x80;                                                  // byte 0 must stay a "button" byte
   } else {
     block[at] = (layer === 1 ? 0x80 : block[at] & 0x80) | (spare - 1);
+  }
+}
+
+// ---------------------------------------------------------------- the mini-stick: hat, axes, and its click ---
+
+const USTICK = 0x2e;                              // the job "this press switches the mini-stick between hat and axes"
+
+/**
+ * What the mini-stick is, and what its click does. From the factory the click switches it between a hat and two axes.
+ * All four of these were tried on a stick:
+ * - with the click an ordinary button and no switching record anywhere, the mini-stick is two axes, permanently;
+ * - with a switching record parked on a line nothing is wired to, the mini-stick starts the way that record says
+ *   (bit 7: as a hat) and stays that way, since nothing can press it.
+ */
+export type MiniStick = 'toggle-hat' | 'toggle-axes' | 'hat' | 'axes';
+
+export const MINI_STICK: Record<MiniStick, string> = {
+  'toggle-hat': 'hat or axes — the click switches (starts as a hat)',
+  'toggle-axes': 'hat or axes — the click switches (starts as axes)',
+  hat: 'always a hat — the click is a button',
+  axes: 'always two axes — the click is a button',
+};
+
+const parked = (block: Uint8Array, wired: (line: number) => boolean) =>
+  [...Array(128).keys()].map((i) => i + 1).filter((l) => !wired(l) && block[physicalEntry(l - 1)] === USTICK);
+
+/** Null when the configuration is none of the four (a switching record on some other control, say). */
+export function miniStick(block: Uint8Array, click: number, wired: (line: number) => boolean): MiniStick | null {
+  const at = physicalEntry(click - 1);
+  if (block[at] === USTICK) return block[at + 1] & 0x80 ? 'toggle-hat' : 'toggle-axes';
+  if (!(block[at] & 0x80)) return null;
+  for (let l = 1; l <= 128; l++) if (l !== click && wired(l) && block[physicalEntry(l - 1)] === USTICK) return null;
+  const spare = parked(block, wired);
+  return spare.length && block[physicalEntry(spare[0] - 1) + 1] & 0x80 ? 'hat' : 'axes';
+}
+
+export function setMiniStick(block: Uint8Array, original: Uint8Array, click: number, mode: MiniStick, wired: (line: number) => boolean): void {
+  const at = physicalEntry(click - 1);
+  // keep the record's other settings (which hat, how it switches) from wherever one last was
+  const kept = [click, ...parked(block, wired)].map((l) => physicalEntry(l - 1)).find((o) => block[o] === USTICK);
+  const record = (kept !== undefined ? block[kept + 1] : original[at] === USTICK ? original[at + 1] : 0xe4) & 0x7f;
+  for (const l of parked(block, wired)) block.set([0xff, 0xff], physicalEntry(l - 1));
+  if (mode === 'toggle-hat' || mode === 'toggle-axes') {
+    // coming back from being a button: drop the button number it was given (a switching press sends nothing).
+    // Not "what it was before": after a write, before is the button.
+    if (block[at] & 0x80) block.set([0xff, 0xff], logicalEntry(click - 1));
+    block.set([USTICK, record | (mode === 'toggle-hat' ? 0x80 : 0)], at);
+    return;
+  }
+  const wasButton = !!(block[at] & 0x80);
+  block.set(PLAIN, at);
+  if (mode === 'hat') { const spare = freeLine(block, wired); if (spare) block.set([USTICK, record | 0x80], physicalEntry(spare - 1)); }
+  if (!wasButton) {
+    // newly a button: left on "its own number" it would send button 13, which the factory layout already uses. Give it
+    // the lowest joystick button nothing else sends.
+    const used = new Set<number>();
+    for (let l = 1; l <= 128; l++) { const f = logicalFunction(block, l - 1); if (f.button !== null && l !== click && (!f.auto || wired(l))) used.add(f.button); }
+    let free = 1; while (used.has(free) && free < 127) free++;
+    setLogical(block, click - 1, 'button', free);
   }
 }
