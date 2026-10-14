@@ -10,6 +10,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
+    "noEmit": true,
     "types": ["w3c-web-hid", "vite/client", "node"]
   },
   "include": ["src"]
