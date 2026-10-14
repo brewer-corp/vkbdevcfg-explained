@@ -230,16 +230,15 @@ export function Chart({ session, ed, live }: { session: Session; ed: Editor; liv
     const base = logicalAxisBase(slot), on = !!readField(ed.block, base, f('en'));
     const sensor = Math.min(7, readField(ed.block, base, f('src')) - 1);
     const max = (1 << readField(ed.original, base, f('prec'))) - 1 || 4095;
-    const v = live?.axes[slot];
+    const v = live?.axes[slot], axis = SCG_AXES.find((a) => a.slot === slot);
     return (
       <>
-        <h3>{SCG_AXES.find((a) => a.slot === slot)?.label} <span>{HID_USAGES[readField(ed.block, base, f('usage'))]} to the PC</span>
+        <h3>{axis?.label} <span>{HID_USAGES[readField(ed.block, base, f('usage'))]} to the PC</span>
           {v !== undefined && on && <em className="pill">{Math.round((v / max) * 100)} %</em>}</h3>
         <div className="icols">
           <div>
             {['en', 'inv', 'dzlo', 'dzhi', 'rel'].map((k) => <Field key={k} ed={ed} base={base} def={f(k)} />)}
-            <p className="dim small">The bar is the raw number the PC receives, not “how far forward”: by joystick
-              convention Y counts down as the stick goes forward. Inverted flips it for games too.</p>
+            {axis?.note && <p className="dim small">{axis.note}</p>}
           </div>
           <CurveEditor ed={ed} n={sensor} />
         </div>

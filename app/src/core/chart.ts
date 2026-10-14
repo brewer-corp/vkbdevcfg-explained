@@ -35,10 +35,16 @@ export const SCG_CHART: { inner: GroupDef[]; outer: GroupDef[] } = {
   ],
 };
 
-/** The EVO's axes, by logical slot, in the order the factory configuration uses. */
-export const SCG_AXES = [
-  { slot: 0, label: 'Stick X' }, { slot: 1, label: 'Stick Y' }, { slot: 2, label: 'Twist' },
-  { slot: 3, label: 'Throttle' }, { slot: 4, label: 'Mini-stick X' }, { slot: 5, label: 'Mini-stick Y' },
+/**
+ * The EVO's axes, by logical slot, in the order the factory configuration uses. `note` is for the two whose numbers run
+ * the opposite way to what a person expects.
+ */
+export const SCG_AXES: { slot: number; label: string; note?: string }[] = [
+  { slot: 0, label: 'Stick X' },
+  { slot: 1, label: 'Stick Y', note: 'This one runs backwards from what you might expect: the value goes down as the stick goes forward.' },
+  { slot: 2, label: 'Twist' },
+  { slot: 3, label: 'Throttle', note: 'This one runs backwards from what you might expect: the value goes down as the lever goes forward.' },
+  { slot: 4, label: 'Mini-stick X' }, { slot: 5, label: 'Mini-stick Y' },
 ];
 
 /** True when this configuration is one the chart can draw: every control it names is wired somewhere. */
