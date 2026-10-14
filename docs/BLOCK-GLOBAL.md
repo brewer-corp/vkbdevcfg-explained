@@ -130,7 +130,7 @@ Real-block values are decoded in the subsection after the table.
 | `0x00F` | 0–1 | **MIN FPS** | Combo (firmware above `0x219D`); items printed as 12 / 2 / 1/2 / 0. For firmware below `0x2181` (when the flags at `0x00F081A4` and `0x00F081D4` are set) the same `ctl 0x3E0` is a checkbox "W10S / WIN10 v20H Sleep if inactive" that writes the same two bits. | medium | `ctl 0x3E0` (case at `0x0056BDBA`); `SheetOption0Activate` `0x00505140` |
 | `0x00F` | 2–3 | MPL combo | The "MPL" combo of this layout variant; stored `(v & 3) << 2`. | medium | `ctl 0x27` (case at `0x00554C54`) |
 | `0x00F` | 4 | MODE (FA0 mode), high bit | Combo "MODE", items M1–M4, 2 bits: the low bit is `0x01A` bit 7, the high bit is this bit. | medium | `ctl 0xB` (case at `0x00549AD2`; instructions `0x00549A9E`–`0x00549ACD`) |
-| `0x00F` | 5 | Product-ID group mode | Combo; hint "Auto/Basic Product ID", caption "Product ID". | medium | `ctl 0x3E3` (case at `0x0056D4FE`) |
+| `0x00F` | 5 | Product-ID group mode | Combo; hint "Auto/Basic Product ID", caption "Product ID". Tried on the stick with and without a bias of 1: the product ID did not change, so this pair of fields is not understood. | medium | `ctl 0x3E3` (case at `0x0056D4FE`) |
 | `0x00F` | 6–7 | **PID bias** | Spin 0–3; hint "Bias Product ID", caption "Bias". VKB manual §2.4.12: USB PID = base + bias (example given: 2234 + 3). | medium | `ctl 0x3E4` (case at `0x0056DCCF`) |
 | `0x010` | 0–2 | Tr.Auto Rate | Combo (an edit in the alternate layout); hint "Declination rate Trimmer Auto function". | medium | `ctl 0x2A` (case at `0x00556327`) |
 | `0x010` | 3 | serial-LED chain: reset pulse | Spin 0/1, "Reset pulse 1=50/0=300 uS" (external sheet). | medium | `ctl 0x38` (case at `0x0055C04E`) |
@@ -305,6 +305,19 @@ FE 18 00 00`: the trigger record, `0x324`–`0x327`, and the brake record plus
 
 ## 3. External devices, `0x330`–`0x3AF`
 
+**Left or right is a setting, not a model.** The stick's USB name and product
+ID follow the grip type in record 0 (byte 2, below): SCG gives "EVO R" and an
+even product ID, SCG-L gives "EVO L" and the next, odd one. That is also all
+the vendor program looks at when it chooses a right-hand or left-hand picture —
+the parity of the product ID. So a profile copied from a right-hand stick to a
+left-hand one changes what the stick calls itself, and a game will see a
+different device.
+
+Standard or Omni is different: it is the firmware. VKB's 2.20.C package has
+separate images for the Gladiator EVO and NXT with the Omni Throttle adapter.
+What name and product ID those report has not been read here; this version of
+the vendor program has no table for them.
+
 Eight records of 16 bytes. Block→UI dispatcher `0x006935F4` (control IDs
 0x65–0x76), per-byte dispatcher `0x0068D36C`, status text `ExtDevStat`
 (`0x0042A968`), type names function `0x006D6258`.
@@ -313,7 +326,7 @@ Eight records of 16 bytes. Block→UI dispatcher `0x006935F4` (control IDs
 |---|---|---|---|---|
 | 0 | all | **AdrL**, device address low | 0x65 | `ExtDevStat` prints `N:byte1.byte0`. |
 | 1 | all | **AdrH**, device address high | 0x66 | The VKB manual gives "AdrH=17". |
-| 2 | 0–4 | **device type**; 0 = NONE (record unused) | 0x67 | Table below. The code tests `rec[2] & 0x1F` everywhere. |
+| 2 | 0–4 | **device type**; 0 = NONE (record unused) | 0x67 | Table below. The code tests `rec[2] & 0x1F` everywhere. ***Verified*** to decide which hand the stick says it is: with type 8 (SCG) a Gladiator EVO reports the USB name `Gladiator EVO R` and product ID `0x0200`; with only this field changed to 9 (SCG-L) it reports `Gladiator EVO L` and `0x0201`. |
 | 2 | 5–7 | polling interval index | 0x68 | 1, 2, 4, 8, 16, 32, 64, 128 ms. Poll combo. |
 | 3 | 0–1 | alternate configuration | 0x76 | 0 = none, 1–3. `ExtDevStat` prints `[n]` if nonzero. |
 | 3 | 2–4 | serial port | 0x69 | 0–2 = USART1–USART3; `ExtDevStat` shows value + 1. |

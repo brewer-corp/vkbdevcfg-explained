@@ -29,6 +29,7 @@ export function Overview({ session, ed, go, changed }: { session: Session; ed: E
       )}
       <div className="stats">
         <Stat k="Model type" v={`0x${typeId(b).toString(16)}`} />
+        {session.productId !== undefined && <Stat k="USB ID" v={`231d:${session.productId.toString(16).padStart(4, '0')}`} />}
         <Stat k="Firmware" v={firmwareText(b)} />
         <Stat k="Checksum" v={blockCrcOk(ed.original) ? 'OK' : 'BAD'} bad={!blockCrcOk(ed.original)} />
         <Stat k="Axes in use" v={String(axes.length)} />
