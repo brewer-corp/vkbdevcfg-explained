@@ -210,7 +210,7 @@ const REPO = 'https://github.com/spadaval/vkbdevcfg-explained';
 /** The site's own bar, so the tool is one page of the site rather than a dead end. */
 function Top() {
   return (
-    <header className="topbar">
+    <header className="topbar"><div className="wrap">
       <a className="mark" href="../">VKBDevCfg <b>// Explained</b></a>
       <nav>
         <a className="tool here" href="./">Config tool</a>
@@ -219,7 +219,7 @@ function Top() {
         <a className="ext" href={`${REPO}/tree/master/docs`} target="_blank" rel="noopener">Technical docs</a>
         <a className="ext" href={REPO} target="_blank" rel="noopener">Source</a>
       </nav>
-    </header>
+    </div></header>
   );
 }
 

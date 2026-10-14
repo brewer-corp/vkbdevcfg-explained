@@ -50,38 +50,7 @@ a:hover { color: #000; background: var(--accent); border-bottom-color: var(--acc
 
 ::selection { background: var(--accent); color: #000; }
 
-/* ---------- top bar ---------- */
-
-.topbar {
-  position: sticky; top: 0; z-index: 20;
-  background: rgba(5, 4, 3, .92); backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--line-2);
-  box-shadow: 0 1px 0 rgba(255, 113, 0, .25), 0 8px 24px rgba(0, 0, 0, .6);
-}
-.topbar .wrap { display: flex; align-items: center; gap: 22px; min-height: 54px; flex-wrap: wrap; }
-.topbar .mark {
-  font-family: var(--caps); font-size: 13px; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--accent); border: none; text-shadow: var(--glow); white-space: nowrap;
-}
-.topbar .mark:hover { background: none; color: var(--accent-hot); }
-.topbar .mark b { color: var(--fg); font-weight: 400; }
-.topbar nav { display: flex; gap: 2px; margin-left: auto; flex-wrap: wrap; }
-.topbar nav a {
-  font-family: var(--caps); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--fg-dim); padding: 9px 13px; border: none; border-bottom: 2px solid transparent;
-}
-.topbar nav a:hover { background: var(--accent); color: #000; }
-.topbar nav a.here { color: var(--accent); border-bottom-color: var(--accent); }
-.topbar nav a.here:hover { color: #000; }
-/* the tool is the thing most visitors want: first, and framed */
-.topbar nav a.tool { color: var(--accent); border: 1px solid var(--accent); border-bottom-width: 1px; margin-right: 8px; }
-.topbar nav a.tool:hover { color: #000; }
-/* off-site links: an arrow out of a box, drawn rather than typed (arrow characters are missing from too many fonts) */
-.topbar nav a.ext::after {
-  content: ""; display: inline-block; width: 9px; height: 9px; margin-left: 6px; vertical-align: -1px; background: currentColor;
-  -webkit-mask: var(--out) center / contain no-repeat; mask: var(--out) center / contain no-repeat;
-}
-:root { --out: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.6'%3E%3Cpath d='M5 1.5H1.5v9h9V7M7 1h4v4M11 1 5.5 6.5'/%3E%3C/svg%3E"); }
+/* ---------- top bar: topbar.css, shared with the config tool ---------- */
 
 /* ---------- layout ---------- */
 
