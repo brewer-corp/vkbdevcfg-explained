@@ -50,7 +50,7 @@ So the seam for a better UI is not the vendor program. It is the block.
 | [`docs/ENCRYPTION-ANALYSIS.md`](docs/ENCRYPTION-ANALYSIS.md) | What the three RC4 layers are for, and where the earlier assessment went wrong. |
 | [`docs/WINDOWS-EXPERIMENTS.md`](docs/WINDOWS-EXPERIMENTS.md) | What a Windows machine with VKBDevCfg is still useful for. |
 | [`docs/MANUAL-DIGEST.md`](docs/MANUAL-DIGEST.md) | Digest of VKB's official NJoy32 User Guide v2.19. |
-| [`app/`](app/) | **VKB Config**, a browser-based configuration tool (TypeScript, WebHID). [Try it](https://spadaval.github.io/vkbdevcfg-explained/app/) — it has a demo mode. |
+| [`app/`](app/) | **VKB Config**, a browser-based configuration tool (TypeScript, WebHID). [Try it](https://brewer-corp.github.io/vkbdevcfg-explained/app/) — it has a demo mode. |
 | [`tools/`](tools/) | The device and profile tools, and the analysis scripts. |
 | [`data/forms/`](data/forms/) | Index of all 69 UI forms decoded from the application binary. |
 

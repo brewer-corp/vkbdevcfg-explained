@@ -205,7 +205,7 @@ export function App() {
   );
 }
 
-const REPO = 'https://github.com/spadaval/vkbdevcfg-explained';
+const REPO = 'https://github.com/brewer-corp/vkbdevcfg-explained';
 
 /** The site's own bar, so the tool is one page of the site rather than a dead end. */
 function Top() {

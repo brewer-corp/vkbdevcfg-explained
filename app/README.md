@@ -4,7 +4,7 @@ A browser-based configuration tool for VKB NJoy32 sticks. It reads the stick's
 4096-byte parameter block over WebHID, shows it as axes, buttons and LEDs, and
 writes it back. No install and no vendor software.
 
-Live: <https://spadaval.github.io/vkbdevcfg-explained/app/>
+Live: <https://brewer-corp.github.io/vkbdevcfg-explained/app/>
 
 ```bash
 npm install
